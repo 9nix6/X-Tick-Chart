@@ -120,8 +120,6 @@ bool TickChartIndicator::OnCalculate(const int _rates_total,const int _prev_calc
       Canvas_IsNewBar(_Time); 
       Canvas_RatesTotalChangedBy(_rates_total);   
       IsNewBar = tickChart.IsNewBar();   
-      
-      firstRun = false;
    }
 
    if(!CheckStatus())
@@ -133,6 +131,8 @@ bool TickChartIndicator::OnCalculate(const int _rates_total,const int _prev_calc
       if(tickChart != NULL)
          tickChart.Init();
       
+      Print("CheckStatus block failed");
+            
       return false;
    }
 
@@ -147,15 +147,26 @@ bool TickChartIndicator::OnCalculate(const int _rates_total,const int _prev_calc
    ArraySetAsSeries(this.Buy_volume,false);   
    ArraySetAsSeries(this.Sell_volume,false);   
    ArraySetAsSeries(this.BuySell_volume,false);   
+   
+   if(firstRun)
+   {
+      GetOLHC(0,_rates_total);
+      firstRun = false;   
+      NeedsReload();
+   }   
 
-   bool needsReload  = (NeedsReload() || (!this.dataReady)); 
-      
-   if(needsReload)
+   if(NeedsReload() || !this.dataReady)
    {
       GetOLHC(0,_rates_total);
       this.prev_calculated = 0;
-      return false;
+      
+      if(NeedsReload() || !this.dataReady)
+      {
+         Print("NeedsReload/DataReady block failed");      
+         return false;
+      }      
    }                    
+                
          
    /*
    if(needsReload || IsNewBar || canvasIsNewTime || (change != 0))

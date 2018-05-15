@@ -1,7 +1,7 @@
 #property copyright "Copyright 2018, AZ-iNVEST"
 #property link      "http://www.az-invest.eu"
 
-//#define TICKCHART_INDICATOR_NAME "TickChart\\TickChart211"
+//#define TICKCHART_INDICATOR_NAME "TickChart\\TickChart213"
 #define TICKCHART_INDICATOR_NAME "Market\\X Tick Chart" 
 
 #define TICKCHART_OPEN            00
@@ -110,6 +110,9 @@ int TickChart::Init()
          //
          // Indicator on Tick Chart uses the values of the TickChart for calculations
          //      
+         
+         IndicatorRelease(tickChartHandle);
+         
          tickChartHandle = GetIndicatorHandle();
          return tickChartHandle;
       }
@@ -179,10 +182,12 @@ int TickChart::Init()
                                        PDCColor,   
                                        showCurrentBarOpenTime,
                                        InfoTextColor,
-                                       UseSoundSignalOnNewBar,
-                                       OnlySignalReversalBars,
+                                       NewBarAlert,
+                                       ReversalBarAlert,
+                                       MaCrossAlert,
                                        UseAlertWindow,
-                                       SendPushNotifications,
+                                       UseSound,    
+                                       UsePushNotifications,
                                        SoundFileBull,
                                        SoundFileBear,
                                        cis.MA1on, 
