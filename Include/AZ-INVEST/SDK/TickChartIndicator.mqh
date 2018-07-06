@@ -2,7 +2,7 @@
 #property link      "http://www.az-invest.eu"
 #property version   "2.11"
 
-input bool UseOnTickChart = true; // Use this indicator on TickChart chart
+input bool UseOnTickChart = false; // Use this indicator with TickChart handle
 
 #include <AZ-INVEST/SDK/TickChart.mqh>
 
@@ -464,8 +464,8 @@ int TickChartIndicator::GetOLHCForIndicatorCalc(double &o[],double &l[],double &
    handle = tickChart.GetHandle();
    if(handle == INVALID_HANDLE)
       return -1;
-   int _count = CopyBuffer(handle,TICKCHART_OPEN,start,count,temp);
-   if(_count == -1)
+   int __count = CopyBuffer(handle,TICKCHART_OPEN,start,count,temp);
+   if(__count == -1)
    {
       int errorCode = GetLastError();
       if(errorCode == ERR_INDICATOR_DATA_NOT_FOUND)
@@ -477,10 +477,10 @@ int TickChartIndicator::GetOLHCForIndicatorCalc(double &o[],double &l[],double &
          return -1;
    }   
       
-   if(_count < count)
+   if(__count < count)
    {
       #ifdef DISPLAY_DEBUG_MSG
-         Print("Fixing offset (req:"+count+" res:"+_count+")");
+         Print("Fixing offset (req:"+count+" res:"+__count+")");
       #endif
       
       ArrayInitialize(o,0x0);
@@ -502,70 +502,70 @@ int TickChartIndicator::GetOLHCForIndicatorCalc(double &o[],double &l[],double &
       }
       // less data - indicator requres more
       
-      ArrayCopy(o,temp,(count-_count),0);
+      ArrayCopy(o,temp,(count-__count),0);
 
-      if(CopyBuffer(handle,TICKCHART_LOW,start,_count,temp) == -1)
+      if(CopyBuffer(handle,TICKCHART_LOW,start,__count,temp) == -1)
          return -1;
-      ArrayCopy(l,temp,(count-_count),0);
+      ArrayCopy(l,temp,(count-__count),0);
          
-      if(CopyBuffer(handle,TICKCHART_HIGH,start,_count,temp) == -1)
+      if(CopyBuffer(handle,TICKCHART_HIGH,start,__count,temp) == -1)
          return -1;
-      ArrayCopy(h,temp,(count-_count),0);
+      ArrayCopy(h,temp,(count-__count),0);
 
-      if(CopyBuffer(handle,TICKCHART_CLOSE,start,_count,temp) == -1)
+      if(CopyBuffer(handle,TICKCHART_CLOSE,start,__count,temp) == -1)
          return -1;
-      ArrayCopy(c,temp,(count-_count),0);
+      ArrayCopy(c,temp,(count-__count),0);
       
       if(getTime)
       {
-         if(CopyBuffer(handle,TICKCHART_BAR_OPEN_TIME,start,_count,temp) == -1)
+         if(CopyBuffer(handle,TICKCHART_BAR_OPEN_TIME,start,__count,temp) == -1)
             return -1;
-         ArrayCopy(t,temp,(count-_count),0);      
+         ArrayCopy(t,temp,(count-__count),0);      
       }
       
       if(getVolumes)
       {
-         if(CopyBuffer(handle,TICKCHART_TICK_VOLUME,start,_count,temp) == -1)
+         if(CopyBuffer(handle,TICKCHART_TICK_VOLUME,start,__count,temp) == -1)
             return -1;
-         ArrayCopy(tickVolume,temp,(count-_count),0);
+         ArrayCopy(tickVolume,temp,(count-__count),0);
    
-         if(CopyBuffer(handle,TICKCHART_REAL_VOLUME,start,_count,temp) == -1)
+         if(CopyBuffer(handle,TICKCHART_REAL_VOLUME,start,__count,temp) == -1)
             return -1;
-         ArrayCopy(realVolume,temp,(count-_count),0);      
+         ArrayCopy(realVolume,temp,(count-__count),0);      
       }
       
 #ifdef P_TICKCHART_BR
    #ifdef P_TICKCHART_BR_PRO
       if(getVolumeBreakdown)
       {      
-         if(CopyBuffer(handle,TICKCHART_BUY_VOLUME,start,_count,temp) == -1)
+         if(CopyBuffer(handle,TICKCHART_BUY_VOLUME,start,__count,temp) == -1)
             return -1;
-         ArrayCopy(buyVolume,temp,(count-_count),0);
+         ArrayCopy(buyVolume,temp,(count-__count),0);
 
-         if(CopyBuffer(handle,TICKCHART_SELL_VOLUME,start,_count,temp) == -1)
+         if(CopyBuffer(handle,TICKCHART_SELL_VOLUME,start,__count,temp) == -1)
             return -1;
-         ArrayCopy(sellVolume,temp,(count-_count),0);
+         ArrayCopy(sellVolume,temp,(count-__count),0);
 
-         if(CopyBuffer(handle,TICKCHART_BUYSELL_VOLUME,start,_count,temp) == -1)
+         if(CopyBuffer(handle,TICKCHART_BUYSELL_VOLUME,start,__count,temp) == -1)
             return -1;
-         ArrayCopy(buySellVolume,temp,(count-_count),0);
+         ArrayCopy(buySellVolume,temp,(count-__count),0);
       }
    #else
    #endif
 #else      
       if(getVolumeBreakdown)
       {      
-         if(CopyBuffer(handle,TICKCHART_BUY_VOLUME,start,_count,temp) == -1)
+         if(CopyBuffer(handle,TICKCHART_BUY_VOLUME,start,__count,temp) == -1)
             return -1;
-         ArrayCopy(buyVolume,temp,(count-_count),0);
+         ArrayCopy(buyVolume,temp,(count-__count),0);
 
-         if(CopyBuffer(handle,TICKCHART_SELL_VOLUME,start,_count,temp) == -1)
+         if(CopyBuffer(handle,TICKCHART_SELL_VOLUME,start,__count,temp) == -1)
             return -1;
-         ArrayCopy(sellVolume,temp,(count-_count),0);
+         ArrayCopy(sellVolume,temp,(count-__count),0);
 
-         if(CopyBuffer(handle,TICKCHART_BUYSELL_VOLUME,start,_count,temp) == -1)
+         if(CopyBuffer(handle,TICKCHART_BUYSELL_VOLUME,start,__count,temp) == -1)
             return -1;
-         ArrayCopy(buySellVolume,temp,(count-_count),0);
+         ArrayCopy(buySellVolume,temp,(count-__count),0);
       }
 #endif
 
@@ -645,11 +645,11 @@ int TickChartIndicator::GetOLHCAndApplPriceForIndicatorCalc(double &o[],double &
 {
    dataReady = true;
    
-   int _count = GetOLHCForIndicatorCalc(o,l,h,c,t,tickVolume,realVolume,buyVolume,sellVolume,buySellVolume,start,count);
-   if(_count < 0)
+   int __count = GetOLHCForIndicatorCalc(o,l,h,c,t,tickVolume,realVolume,buyVolume,sellVolume,buySellVolume,start,count);
+   if(__count < 0)
    {
       dataReady = false;
-      return _count;
+      return __count;
    }
    if(applied_price == PRICE_CLOSE) 
    {
@@ -669,16 +669,16 @@ int TickChartIndicator::GetOLHCAndApplPriceForIndicatorCalc(double &o[],double &
    }
    else
    {       
-      if(ArrayResize(price,_count) == -1)
+      if(ArrayResize(price,__count) == -1)
          return -1;      
 
-      for(int i=0; i<_count; i++)
+      for(int i=0; i<__count; i++)
       {
          price[i] = CalcAppliedPrice(o[i],l[i],h[i],c[i],_applied_price);
       }
    }
       
-   return _count;
+   return __count;
 }
 
 ENUM_TIMEFRAMES TickChartIndicator::TFMigrate(int tf)
