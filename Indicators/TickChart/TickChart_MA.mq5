@@ -200,7 +200,7 @@ int OnCalculate(const int rates_total,const int prev_calculated,
    // Process data through XTickChart indicator
    //
    
-   if(!tickChartIndicator.OnCalculate(rates_total,prev_calculated,time))
+   if(!tickChartIndicator.OnCalculate(rates_total,prev_calculated,Time))
       return(0);
 
    //
