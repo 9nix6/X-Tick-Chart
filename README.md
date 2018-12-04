@@ -15,5 +15,7 @@ used on the chart to the XTickChart settings that should be used in the EA.
 All folders (Experts, Include & Indicators) & sub-folders should be placed in the **MQL5** sub-folder of your Metatrader's Data Folder.
 All indicator and EA files need to be recompiled.
 
+Please always grab the latest release from https://github.com/9nix6/X-Tick-Chart/releases
+
 ## Resources
 The **X Tick Chart** indicator for MT5 can be downloaded from https://www.mql5.com/en/market/product/24312
