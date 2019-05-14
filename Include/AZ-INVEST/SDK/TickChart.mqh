@@ -1,7 +1,7 @@
 #property copyright "Copyright 2018, AZ-iNVEST"
 #property link      "http://www.az-invest.eu"
 
-//#define TICKCHART_INDICATOR_NAME "TickChart\\TickChart215"
+//#define TICKCHART_INDICATOR_NAME "TickChart\\TickChart220"
 #define TICKCHART_INDICATOR_NAME "Market\\X Tick Chart" 
 
 #define TICKCHART_OPEN            00
