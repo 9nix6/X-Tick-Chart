@@ -6,14 +6,14 @@ used on the chart to the XTickChart settings that should be used in the EA.
 ## The files
 **TickChart.mqh** - The header file for including in the EA code. It contains the definition and implementation of the TickChart class
 
-**CommonSettings.mqh** & **TickChartSettings.mqh** - These header files are used by the **TickChart** class to automatically read the EA settings used on the tick chart where the EA should be attached.
+**CommonSettings.mqh**, **TickChartSettings.mqh**, **CustomChartSettingsBase.mqh**, **ICustomChartSettings** & **CustomChartInputs.mqh**  - These header files are used by the **TickChart** class to automatically read the EA settings used on the tick chart where the EA should be attached.
 
 **TickChartIndicator.mqh** - This helper header file includes a **TickChartIndicator** class which is used to patch MQL5 indicators to work directly on the tick charts and use the tick chart's OLHC values for calculation.
 
 ## Installation
 
 All folders (Experts, Include & Indicators) & sub-folders should be placed in the **MQL5** sub-folder of your Metatrader's Data Folder.
-All indicator and EA files need to be recompiled.
+**All indicator and EA files need to be recompiled**.
 
 Please always grab the latest release from https://github.com/9nix6/X-Tick-Chart/releases
 
