@@ -6,7 +6,7 @@
    #ifdef AMP_VERSION
       #define CUSTOM_CHART_NAME "DTA Tickchart"
    #else
-      #define CUSTOM_CHART_NAME "Tick Chart"
+      #define CUSTOM_CHART_NAME "X Tick Chart"
    #endif
 #endif
 
