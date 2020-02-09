@@ -1,42 +1,51 @@
-#property copyright "Copyright 2018, AZ-iNVEST"
+#property copyright "Copyright 2018-2020, Level Up Software"
 #property link      "http://www.az-invest.eu"
 
-//#define TICKCHART_INDICATOR_NAME "TickChart\\TickChart220"
-#define TICKCHART_INDICATOR_NAME "Market\\X Tick Chart" 
+#ifdef DEVELOPER_VERSION
+   #define TICKCHART_INDICATOR_NAME "TickChart\\TickChart300" 
+#else
+   #ifdef AMP_VERSION
+      #define TICKCHART_INDICATOR_NAME "DTA Tickchart" 
+   #else
+      #define TICKCHART_INDICATOR_NAME "Market\\X Tick Chart" 
+   #endif
+#endif
 
 #define TICKCHART_OPEN            00
 #define TICKCHART_HIGH            01
 #define TICKCHART_LOW             02
 #define TICKCHART_CLOSE           03 
 #define TICKCHART_BAR_COLOR       04
-#define TICKCHART_MA1             05
-#define TICKCHART_MA2             06
-#define TICKCHART_MA3             07
-#define TICKCHART_CHANNEL_HIGH    08
-#define TICKCHART_CHANNEL_MID     09
-#define TICKCHART_CHANNEL_LOW     10
-#define TICKCHART_BAR_OPEN_TIME   11
-#define TICKCHART_TICK_VOLUME     12
-#define TICKCHART_REAL_VOLUME     13
-#define TICKCHART_BUY_VOLUME      14
-#define TICKCHART_SELL_VOLUME     15
-#define TICKCHART_BUYSELL_VOLUME  16
+#define TICKCHART_SESSION_RECT_H  05
+#define TICKCHART_SESSION_RECT_L  06
+#define TICKCHART_MA1             07
+#define TICKCHART_MA2             08
+#define TICKCHART_MA3             09
+#define TICKCHART_MA4             10
+#define TICKCHART_CHANNEL_HIGH    11
+#define TICKCHART_CHANNEL_MID     12
+#define TICKCHART_CHANNEL_LOW     13
+#define TICKCHART_BAR_OPEN_TIME   14
+#define TICKCHART_TICK_VOLUME     15
+#define TICKCHART_REAL_VOLUME     16
+#define TICKCHART_BUY_VOLUME      17
+#define TICKCHART_SELL_VOLUME     18
+#define TICKCHART_BUYSELL_VOLUME  19
+#define TICKCHART_RUNTIME_ID      20
 
-#include <AZ-INVEST/SDK/TickChartSettings.mqh>
+#include <az-invest/sdk/TickCustomChartSettings.mqh>
 
 class TickChart
 {
    private:
    
-      TickChartSettings * tickChartSettings;
-
-      //
-      //  Median renko indicator handle
-      //
+      CTickCustomChartSettigns * tickChartSettings;      
       
-      int tickChartHandle;
+      int tickChartHandle; //  tick chart indicator handle      
       string tickChartSymbol;
       bool usedByIndicatorOnTickChart;
+      
+      datetime prevBarTime;      
    
    public:
       
@@ -48,53 +57,72 @@ class TickChart
       int Init();
       void Deinit();
       bool Reload();
+      void ReleaseHandle();
       
       int GetHandle(void) { return tickChartHandle; };
+      double GetRuntimeId();
+      
+      bool IsNewBar();
+      
       bool GetMqlRates(MqlRates &ratesInfoArray[], int start, int count);
       bool GetBuySellVolumeBreakdown(double &buy[], double &sell[], double &buySell[], int start, int count);      
+      bool GetMA(int MaBufferId, double &MA[], int start, int count);
+      bool GetChannel(double &HighArray[], double &MidArray[], double &LowArray[], int start, int count);
+      
+      // The following 6 functions are deprecated, please use GetMA & GetChannelData functions instead
       bool GetMA1(double &MA[], int start, int count);
       bool GetMA2(double &MA[], int start, int count);
       bool GetMA3(double &MA[], int start, int count);
       bool GetDonchian(double &HighArray[], double &MidArray[], double &LowArray[], int start, int count);
       bool GetBollingerBands(double &HighArray[], double &MidArray[], double &LowArray[], int start, int count);
       bool GetSuperTrend(double &SuperTrendHighArray[], double &SuperTrendArray[], double &SuperTrendLowArray[], int start, int count); 
-      
-      bool IsNewBar();
-      
+      //
+            
    private:
 
-      bool GetChannel(double &HighArray[], double &MidArray[], double &LowArray[], int start, int count);
       int GetIndicatorHandle(void);
+      bool GetChannelData(double &HighArray[], double &MidArray[], double &LowArray[], int start, int count);
 };
 
 TickChart::TickChart(void)
 {
-   tickChartSettings = new TickChartSettings();
+   tickChartSettings = new CTickCustomChartSettigns();
    tickChartHandle = INVALID_HANDLE;
    tickChartSymbol = _Symbol;
    usedByIndicatorOnTickChart = false;
+   prevBarTime = 0;
 }
 
 TickChart::TickChart(bool isUsedByIndicatorOnTickChart)
 {
-   tickChartSettings = new TickChartSettings();
+   tickChartSettings = new CTickCustomChartSettigns(); 
    tickChartHandle = INVALID_HANDLE;
    tickChartSymbol = _Symbol;
    usedByIndicatorOnTickChart = isUsedByIndicatorOnTickChart;
+   prevBarTime = 0;
 }
 
 TickChart::TickChart(string symbol)
 {
-   tickChartSettings = new TickChartSettings();
+   tickChartSettings = new CTickCustomChartSettigns();
    tickChartHandle = INVALID_HANDLE;
    tickChartSymbol = symbol;
    usedByIndicatorOnTickChart = false;
+   prevBarTime = 0;
 }
 
 TickChart::~TickChart(void)
 {
    if(tickChartSettings != NULL)
       delete tickChartSettings;
+}
+
+void TickChart::ReleaseHandle()
+{ 
+   if(tickChartHandle != INVALID_HANDLE)
+   {
+      IndicatorRelease(tickChartHandle); 
+   }
 }
 
 //
@@ -127,7 +155,7 @@ int TickChart::Init()
          }
          else
          {
-            Print("Failed to load indicator settings - XTickChart indicator not on chart");
+            Print("Failed to load indicator settings - "+TICKCHART_INDICATOR_NAME+" not on chart");
             return INVALID_HANDLE;
          }
       }   
@@ -153,11 +181,6 @@ int TickChart::Init()
             //  Load settings from EA inputs
             //
             tickChartSettings.Load();
-         #else
-            //
-            //  Save indicator inputs for use by EA attached to same chart.
-            //
-            tickChartSettings.Save();
          #endif
       }
    }   
@@ -165,12 +188,9 @@ int TickChart::Init()
    TICKCHART_SETTINGS s = tickChartSettings.GetTickChartSettings();         
    CHART_INDICATOR_SETTINGS cis = tickChartSettings.GetChartIndicatorSettings(); 
 
-   //tickChartSettings.Debug();
-   
-   tickChartHandle = iCustom(this.tickChartSymbol,_Period,TICKCHART_INDICATOR_NAME, 
-                                       s.barSizeInTicks,
-                                       s.showNumberOfDays,
-                                       s.resetOpenOnNewTradingDay,
+   tickChartHandle = iCustom(this.tickChartSymbol, _Period, TICKCHART_INDICATOR_NAME, 
+                                       s.barSizeInTicks, s.showNumberOfDays, s.resetOpenOnNewTradingDay,
+                                       TradingSessionTime,
                                        TopBottomPaddingPercentage,
                                        showPivots,
                                        pivotPointCalculationType,
@@ -181,7 +201,6 @@ int TickChart::Init()
                                        PDLColor,
                                        PDCColor,   
                                        showCurrentBarOpenTime,
-                                       InfoTextColor,
                                        NewBarAlert,
                                        ReversalBarAlert,
                                        MaCrossAlert,
@@ -191,41 +210,53 @@ int TickChart::Init()
                                        SoundFileBull,
                                        SoundFileBear,
                                        cis.MA1on, 
+                                       cis.MA1lineType,
                                        cis.MA1period,
                                        cis.MA1method,
                                        cis.MA1applyTo,
                                        cis.MA1shift,
-                                       cis.MA2on,
+                                       cis.MA1priceLabel,
+                                       cis.MA2on, 
+                                       cis.MA2lineType,
                                        cis.MA2period,
                                        cis.MA2method,
                                        cis.MA2applyTo,
                                        cis.MA2shift,
-                                       cis.MA3on,
+                                       cis.MA2priceLabel,
+                                       cis.MA3on, 
+                                       cis.MA3lineType,
                                        cis.MA3period,
                                        cis.MA3method,
                                        cis.MA3applyTo,
                                        cis.MA3shift,
+                                       cis.MA3priceLabel,
+                                       cis.MA4on, 
+                                       cis.MA4lineType,
+                                       cis.MA4period,
+                                       cis.MA4method,
+                                       cis.MA4applyTo,
+                                       cis.MA4shift,
+                                       cis.MA4priceLabel,
                                        cis.ShowChannel,
-                                       "",
-                                       cis.DonchianPeriod,
-                                       cis.BBapplyTo,
-                                       cis.BollingerBandsPeriod,
-                                       cis.BollingerBandsDeviations,
-                                       cis.SuperTrendPeriod,
-                                       cis.SuperTrendMultiplier,
-                                       "",
-                                       DisplayAsBarChart,
-                                       UsedInEA,
-                                       false);
-
+                                       cis.ChannelPeriod,
+                                       cis.ChannelAtrPeriod,
+                                       cis.ChannelAppliedPrice,
+                                       cis.ChannelMultiplier,
+#ifndef AMP_VERSION                                       
+                                       cis.ChannelBandsDeviations, 
+#endif                                       
+                                       cis.ChannelPriceLabel,
+                                       cis.ChannelMidPriceLabel,
+                                       true); // used in EA
+                                       // DisplayAsBarChart & ShiftObj let at defaults
       
     if(tickChartHandle == INVALID_HANDLE)
     {
-      Print("XTickChart indicator init failed on error ",GetLastError());
+      Print(TICKCHART_INDICATOR_NAME+" indicator init failed on error ",GetLastError());
     }
     else
     {
-      Print("XTickChart indicator init OK");
+      Print(TICKCHART_INDICATOR_NAME+" indicator init OK");
     }
      
     return tickChartHandle;
@@ -237,14 +268,37 @@ int TickChart::Init()
 
 bool TickChart::Reload()
 {
-   if(tickChartSettings.Changed())
+   bool actionNeeded = false;
+   int temp = GetIndicatorHandle();
+   
+   if(temp != tickChartHandle)
    {
-      if(Init() == INVALID_HANDLE)
-         return false;
-      
-      return true;
+      IndicatorRelease(tickChartHandle); 
+      tickChartHandle = INVALID_HANDLE;
+
+      actionNeeded = true;
    }
    
+   if(tickChartSettings.Changed(GetRuntimeId()))
+   {
+      actionNeeded = true;      
+   }
+   
+   if(actionNeeded)
+   {
+      if(tickChartHandle != INVALID_HANDLE)
+      {
+         IndicatorRelease(tickChartHandle); 
+         tickChartHandle = INVALID_HANDLE;
+      }
+
+      if(Init() == INVALID_HANDLE)
+         return false;
+         
+      return true;
+   }    
+
+
    return false;
 }
 
@@ -260,9 +314,9 @@ void TickChart::Deinit()
    if(!usedByIndicatorOnTickChart)
    {
       if(IndicatorRelease(tickChartHandle))
-         Print("XTickChart indicator handle released");
+         Print(TICKCHART_INDICATOR_NAME+" indicator handle released");
       else 
-         Print("Failed to release XTickChart indicator handle");
+         Print("Failed to release "+TICKCHART_INDICATOR_NAME+" indicator handle");
    }
 }
 
@@ -272,13 +326,13 @@ void TickChart::Deinit()
 
 bool TickChart::IsNewBar()
 {
-   MqlRates currentBar[1];
-   static datetime prevBarTime;
-   
+   MqlRates currentBar[1];   
    GetMqlRates(currentBar,0,1);
    
    if(currentBar[0].time == 0)
+   {
       return false;
+   }
    
    if(prevBarTime < currentBar[0].time)
    {
@@ -401,11 +455,46 @@ bool TickChart::GetBuySellVolumeBreakdown(double &buy[], double &sell[], double 
 }
 
 //
+// Get "count" values for MaBufferId buffer into "MA[]" array starting from "start" bar  
+//
+
+bool TickChart::GetMA(int MaBufferId, double &MA[], int start, int count)
+{
+   double tempMA[];
+   if(ArrayResize(tempMA, count) == -1)
+      return false;
+
+   if(ArrayResize(MA, count) == -1)
+      return false;
+   
+   if(MaBufferId != TICKCHART_MA1 && MaBufferId != TICKCHART_MA2 && MaBufferId != TICKCHART_MA3 && MaBufferId != TICKCHART_MA4)
+   {
+      Print("Incorrect MA buffer id specified in "+__FUNCTION__);
+      return false;
+   }
+   
+   if(CopyBuffer(tickChartHandle, MaBufferId,start,count,tempMA) == -1)
+   {
+      return false;
+   }
+   
+   for(int i=0; i<count; i++)
+   {
+      MA[count-1-i] = tempMA[i];
+   }
+
+   ArrayFree(tempMA);      
+   return true;
+}
+
+//
 // Get "count" MovingAverage1 values into "MA[]" array starting from "start" bar  
 //
 
 bool TickChart::GetMA1(double &MA[], int start, int count)
 {
+   Print(__FUNCTION__+" is deprecated, please use GetMA instead");
+   
    double tempMA[];
    if(ArrayResize(tempMA,count) == -1)
       return false;
@@ -431,6 +520,8 @@ bool TickChart::GetMA1(double &MA[], int start, int count)
 
 bool TickChart::GetMA2(double &MA[], int start, int count)
 {
+   Print(__FUNCTION__+" is deprecated, please use GetMA instead");
+   
    double tempMA[];
    if(ArrayResize(tempMA,count) == -1)
       return false;
@@ -456,6 +547,8 @@ bool TickChart::GetMA2(double &MA[], int start, int count)
 
 bool TickChart::GetMA3(double &MA[], int start, int count)
 {
+   Print(__FUNCTION__+" is deprecated, please use GetMA instead");
+   
    double tempMA[];
    if(ArrayResize(tempMA,count) == -1)
       return false;
@@ -476,12 +569,13 @@ bool TickChart::GetMA3(double &MA[], int start, int count)
 }
 
 //
-// Get "count" Renko Donchian channel values into "HighArray[]", "MidArray[]", and "LowArray[]" arrays starting from "start" bar  
+// Get "count" Donchian channel values into "HighArray[]", "MidArray[]", and "LowArray[]" arrays starting from "start" bar  
 //
 
 bool TickChart::GetDonchian(double &HighArray[], double &MidArray[], double &LowArray[], int start, int count)
 {
-   return GetChannel(HighArray,MidArray,LowArray,start,count);
+   Print(__FUNCTION__+" is deprecated, please use GetChannelData instead");
+   return GetChannelData(HighArray,MidArray,LowArray,start,count);
 }
 
 //
@@ -490,7 +584,8 @@ bool TickChart::GetDonchian(double &HighArray[], double &MidArray[], double &Low
 
 bool TickChart::GetBollingerBands(double &HighArray[], double &MidArray[], double &LowArray[], int start, int count)
 {
-   return GetChannel(HighArray,MidArray,LowArray,start,count);
+   Print(__FUNCTION__+" is deprecated, please use GetChannelData instead");
+   return GetChannelData(HighArray,MidArray,LowArray,start,count);
 }
 
 //
@@ -499,15 +594,24 @@ bool TickChart::GetBollingerBands(double &HighArray[], double &MidArray[], doubl
 
 bool TickChart::GetSuperTrend(double &SuperTrendHighArray[], double &SuperTrendArray[], double &SuperTrendLowArray[], int start, int count)
 {
-   return GetChannel(SuperTrendHighArray,SuperTrendArray,SuperTrendLowArray,start,count);
+   Print(__FUNCTION__+" is deprecated, please use GetChannel function instead");
+   return GetChannelData(SuperTrendHighArray,SuperTrendArray,SuperTrendLowArray,start,count);
 }
 
+//
+// Get Channel values into "HighArray[]", "MidArray[]", and "LowArray[]" arrays starting from "start" bar  
+//
+
+bool TickChart::GetChannel(double &HighArray[], double &MidArray[], double &LowArray[], int start, int count)
+{
+   return GetChannelData(HighArray,MidArray,LowArray,start,count);
+}
 
 //
 // Private function used by GetRenkoDonchian and GetRenkoBollingerBands functions to get data
 //
 
-bool TickChart::GetChannel(double &HighArray[], double &MidArray[], double &LowArray[], int start, int count)
+bool TickChart::GetChannelData(double &HighArray[], double &MidArray[], double &LowArray[], int start, int count)
 {
    double tempH[], tempM[], tempL[];
 
@@ -558,12 +662,22 @@ int TickChart::GetIndicatorHandle(void)
       iName = ChartIndicatorName(0,0,j);
       if(StringFind(iName,CUSTOM_CHART_NAME) != -1)
       {
-         Print("Using handle of "+iName);
          return ChartIndicatorGet(0,0,iName);   
       }   
+      
       j++;
    }
    
    Print("Failed getting handle of "+CUSTOM_CHART_NAME);
    return INVALID_HANDLE;
+}
+
+double TickChart::GetRuntimeId()
+{
+   double runtimeId[1];
+    
+   if(CopyBuffer(tickChartHandle, TICKCHART_RUNTIME_ID, 0, 1, runtimeId) == -1)
+      return -1;
+
+   return runtimeId[0];   
 }

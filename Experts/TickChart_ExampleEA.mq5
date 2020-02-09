@@ -1,6 +1,6 @@
-#property copyright "Copyright 2019, AZ-iNVEST"
-#property link      "http://www.az-invest.eu"
-#property version   "2.05"
+#property copyright "Copyright 2019-2020, Level Up"
+#property link      "https://www.az-invest.eu"
+#property version   "3.00"
 #property description "Example EA showing the way to use the TickChart class defined in TickChart.mqh" 
 
 //
@@ -11,7 +11,7 @@
 // the TickChart indicator attached.
 //
 
-//#define SHOW_INDICATOR_INPUTS
+#define SHOW_INDICATOR_INPUTS
 
 //
 // You need to include the TickChart.mqh header file
@@ -20,22 +20,17 @@
 #include <AZ-INVEST/SDK/TickChart.mqh>
 //
 //  To use the TickChart indicator in your EA you need do instantiate the indicator class (TickChart)
-//  and call the Init() method in your EA's OnInit() function.
-//  Don't forget to release the indicator when you're done by calling the Deinit() method.
-//  Example shown in OnInit & OnDeinit functions below:
+//  and call the Init() and Deinit() methods in your EA's OnInit() and OnDeinit() functions.
+//  Example shown below
 //
 
-TickChart * tickChart;
+TickChart tickChart(MQLInfoInteger((int)MQL5_TESTING) ? false : true);
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit()
 {
-   tickChart = new TickChart(MQLInfoInteger((int)MQL5_TESTING) ? false : true);
-   if(tickChart == NULL)
-      return(INIT_FAILED);
-   
    tickChart.Init();
    if(tickChart.GetHandle() == INVALID_HANDLE)
       return(INIT_FAILED);
@@ -43,7 +38,7 @@ int OnInit()
    //
    //  your custom code goes here...
    //
-   
+      
    return(INIT_SUCCEEDED);
 }
 //+------------------------------------------------------------------+
@@ -51,11 +46,7 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
 {
-   if(tickChart != NULL)
-   {
-      tickChart.Deinit();
-      delete tickChart;
-   }
+   tickChart.Deinit();
    
    //
    //  your custom code goes here...
@@ -77,7 +68,7 @@ void OnTick()
    // when a new bar is fully formed. 
    // The IsNewBar() method is used for checking if a new tick chart bar has formed 
    //
-   
+      
    if(tickChart.IsNewBar())
    {
       //
@@ -96,7 +87,7 @@ void OnTick()
       double MA1[]; // array to be filled by values of the first moving average
       double MA2[]; // array to be filled by values of the second moving average
       
-      if(tickChart.GetMA1(MA1,startAtBar,numberOfBars) && tickChart.GetMA2(MA2,startAtBar,numberOfBars))
+      if(tickChart.GetMA(TICKCHART_MA1, MA1, startAtBar, numberOfBars) && tickChart.GetMA(TICKCHART_MA2, MA2, startAtBar, numberOfBars))
       {
          //
          // Values are stored in the MA1 and MA2 arrays and are now ready for use
@@ -158,18 +149,18 @@ void OnTick()
       //
       // All charts that contain real volume information (i.e. stocks, futures, ...)
       // also contain the brekdown of volume into BUY, SELL and BUY/SELL volume.
-      // This data is accessed using the
+      // This data is accessed using
       // GetBuySellVolumeBreakdown(long &buy[], long &sell[], long &buySell[], int start, int count)
-      // method. Example below:
+      // Example below:
       
       double buyVolume[];      // This array will store the values of the BUY volume 
       double sellVolume[];     // This array will store the values of the SELL volume
       double buySellVolume[];  // This array will store the values of the BUY/SELL volume
       
       // When you add BUY, SELL and BUY/SELL volume numbers for a bar they will be equal 
-      // to the Real Volume number that can be accessed using the
+      // to the Real Volume number that can be accessed using 
       // GetMqlRates(MqlRates &ratesInfoArray[], int start, int count) 
-      // metod described above.
+      // as described above.
 
       startAtBar   = 1;    // get values starting from the last completed bar.
       numberOfBars = 2;    // gat a total of 2 values (for 2 bars starting from bar 1 (last completed))
@@ -182,64 +173,23 @@ void OnTick()
       }
       
       //
-      // Getting Donchain channel values is done using the
-      // GetDonchian(double &HighArray[], double &MidArray[], double &LowArray[], int start, int count) 
-      // method. Example below:
+      // Getting the values of the channel indicator (Donchain, Bullinger Bands, Keltner or Super Trend) is done using
+      // GetChannel(double &HighArray[], double &MidArray[], double &LowArray[], int start, int count) 
+      // Example below:
       //
       
-      double HighArray[];  // This array will store the values of the high band
-      double MidArray[];   // This array will store the values of the middle band
-      double LowArray[];   // This array will store the values of the low band
+      double HighArray[];  // This array will store the values of the channel's high band
+      double MidArray[];   // This array will store the values of the channel's middle band
+      double LowArray[];   // This array will store the values of the channel's low band
       
       startAtBar   = 1;    // get values starting from the last completed bar.
       numberOfBars = 20;   // gat a total of 20 values (for 20 bars starting from bar 1 (last completed))
       
-      if(tickChart.GetDonchian(HighArray,MidArray,LowArray,startAtBar,numberOfBars))
+      if(tickChart.GetChannel(HighArray,MidArray,LowArray,startAtBar,numberOfBars))
       {
          //
-         // Apply your Donchian channel logic here...
-         //
-      }
-      
-      //
-      // Getting Bollinger Bands values is done using the
-      // GetBollingerBands(double &HighArray[], double &MidArray[], double &LowArray[], int start, int count) 
-      // method. Example below:
-      //
-      
-      // HighArray[] array will store the values of the high band
-      // MidArray[] array will store the values of the middle band
-      // LowArray[] array will store the values of the low band
-      
-      startAtBar   = 1;    // get values starting from the last completed bar.
-      numberOfBars = 10;   // gat a total of 10 values (for 10 bars starting from bar 1 (last completed))     
-      
-      if(tickChart.GetBollingerBands(HighArray,MidArray,LowArray,startAtBar,numberOfBars))
-      {
-         //
-         // Apply your Bollinger Bands logic here...
+         // Apply your logic here...
          //
       } 
-
-      //
-      // Getting SuperTrend values is done using the
-      // GetSuperTrend(double &SuperTrendHighArray[], double &SuperTrendArray[], double &SuperTrendLowArray[], int start, int count) 
-      // method. Example below:
-      //
-      
-      // HighArray[] array will store the values of the high SuperTrend line
-      // MidArray[] array will store the values of the SuperTrend value
-      // LowArray[] array will store the values of the low SuperTrend line
-      
-      startAtBar   = 1;   // get values starting from the last completed bar.
-      numberOfBars = 3;   // gat a total of 3 values (for 3 bars starting from bar 1 (last completed))     
-      
-      if(tickChart.GetSuperTrend(HighArray,MidArray,LowArray,startAtBar,numberOfBars))
-      {
-         //
-         // Apply your SuperTrend logic here...
-         //
-      } 
-      
    } 
 }

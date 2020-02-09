@@ -1,8 +1,8 @@
-#property copyright "Copyright 2018, AZ-iNVEST"
+#property copyright "Copyright 2018-2020, Level Up Software"
 #property link      "http://www.az-invest.eu"
-#property version   "2.11"
+#property version   "4.00"
 
-input bool UseOnTickChart = false; // Use this indicator with TickChart handle
+input bool UseOnTickChart = true; // Use this indicator with TickChart handle
 
 #include <AZ-INVEST/SDK/TickChart.mqh>
 
@@ -19,10 +19,14 @@ class TickChartIndicator
       bool                 useAppliedPrice;
       ENUM_APPLIED_PRICE   applied_price;
       
+      bool                 firstRun;
       bool                 dataReady;
       
+      datetime             prevTime;
+      int                  prevRatesTotal;
+      
    public:
-   
+      
       datetime Time[];
       double   Open[];
       double   Low[];
@@ -34,6 +38,20 @@ class TickChartIndicator
       double   Buy_volume[];
       double   Sell_volume[];
       double   BuySell_volume[];
+
+      datetime GetTime(int index) { return GetArrayValueDateTime(Time, index); };
+      double   GetOpen(int index) { return GetArrayValueDouble(Open, index); };
+      double   GetLow(int index) { return GetArrayValueDouble(Low, index); };
+      double   GetHigh(int index) { return GetArrayValueDouble(High, index); };
+      double   GetClose(int index) { return GetArrayValueDouble(Close, index); };
+      double   GetPrice(int index) { return GetArrayValueDouble(Price, index); };
+      long     GetTick_volume(int index) { return GetArrayValueLong(Tick_volume, index); };
+      long     GetReal_volume(int index) { return GetArrayValueLong(Real_volume, index); };
+      double   GetBuy_volume(int index)  { return GetArrayValueDouble(Buy_volume, index); };
+      double   GetSell_volume(int index) { return GetArrayValueDouble(Sell_volume, index); };
+      double   GetBuySell_volume(int index) { return GetArrayValueDouble(BuySell_volume, index); };
+   
+   
       bool     IsNewBar;
    
                TickChartIndicator();
@@ -45,9 +63,11 @@ class TickChartIndicator
       void     SetGetTimeFlag() { this.getTime = true; };
       
       bool     OnCalculate(const int rates_total,const int prev_calculated, const datetime &_Time[]);
+      void     OnDeinit(const int reason);
       int      GetPrevCalculated() { return prev_calculated; };     
+      int      GetRatesTotal() { return ArraySize(Open); };     
       void     BufferShiftLeft(double &buffer[]);
-      
+            
    private:
   
       bool  CheckStatus();
@@ -67,6 +87,9 @@ class TickChartIndicator
 
       ENUM_TIMEFRAMES TFMigrate(int tf);
       datetime iTime(string symbol,int tf,int index);
+      double GetArrayValueDouble(double &arr[], int index);
+      long GetArrayValueLong(long &arr[], int index);
+      datetime GetArrayValueDateTime(datetime &arr[], int index);
 };
 
 TickChartIndicator::TickChartIndicator(void)
@@ -80,6 +103,9 @@ TickChartIndicator::TickChartIndicator(void)
    getTime = false;
    
    dataReady = false;
+   firstRun = true;
+   prevTime = 0;
+   prevRatesTotal = 0;
 }
 
 TickChartIndicator::~TickChartIndicator(void)
@@ -111,10 +137,12 @@ bool TickChartIndicator::NeedsReload(void)
    return false;
 }
 
+void TickChartIndicator::OnDeinit(const int reason) 
+{
+}
+
 bool TickChartIndicator::OnCalculate(const int _rates_total,const int _prev_calculated, const datetime &_Time[])
 {   
-   static bool firstRun = true;
-
    if(firstRun)
    {
       Canvas_IsNewBar(_Time); 
@@ -152,37 +180,24 @@ bool TickChartIndicator::OnCalculate(const int _rates_total,const int _prev_calc
    {
       GetOLHC(0,_rates_total);
       firstRun = false;   
-      NeedsReload();
    }   
-
-   if(NeedsReload() || !this.dataReady)
+   
+   if(NeedsReload() || !this.dataReady) 
    {
       GetOLHC(0,_rates_total);
       this.prev_calculated = 0;
       
-      if(NeedsReload() || !this.dataReady)
-      {
-         Print("NeedsReload/DataReady block failed");      
-         return false;
-      }      
+      return false;
    }                    
                 
-         
-   /*
-   if(needsReload || IsNewBar || canvasIsNewTime || (change != 0))
-   {  
-      Print("reload="+needsReload+", renkoisnewbar="+IsNewBar+", canvasIsNewTime="+canvasIsNewTime+", change="+change);
-         GetOLHC(0,_rates_total);
-         this.prev_calculated = ArraySize(this.Open);
-      return true;         
-   }
-   */
    bool change = Canvas_RatesTotalChangedBy(_rates_total);
+
    if(change != 0)
    {
       #ifdef DISPLAY_DEBUG_MSG
          Print("rates total changed to:"+_rates_total);
       #endif
+      
       if(change == 1)
       {
          #ifdef DISPLAY_DEBUG_MSG
@@ -197,7 +212,8 @@ bool TickChartIndicator::OnCalculate(const int _rates_total,const int _prev_calc
          #endif
          GetOLHC(0,_rates_total);
       }
-      this.prev_calculated = 0;//_prev_calculated; 
+      
+      this.prev_calculated = 0;
       Canvas_IsNewBar(_Time);
       return true;   
    }
@@ -211,7 +227,7 @@ bool TickChartIndicator::OnCalculate(const int _rates_total,const int _prev_calc
       {
          GetOLHC(0,_rates_total);
          this.prev_calculated = 0;
-         return true;   ///////// false         
+         return true; 
       }
 
       OLHCShiftRight();
@@ -226,7 +242,6 @@ bool TickChartIndicator::OnCalculate(const int _rates_total,const int _prev_calc
       this.prev_calculated = 0;
       return true;
    } 
-
    
    //
    // Only recalculate last bar
@@ -255,6 +270,7 @@ int TickChartIndicator::GetOLHC(int start, int count)
      this.Low[last] = tempRates[0].low;
      this.High[last] = tempRates[0].high;
      this.Close[last] = tempRates[0].close;    
+     
      if(getTime)
      {
          this.Time[last] = tempRates[0].time;
@@ -300,10 +316,13 @@ void TickChartIndicator::OLHCShiftRight()
       this.High[i] = this.High[i-1];
       this.Low[i] = this.Low[i-1];
       this.Close[i] = this.Close[i-1];
+
       if(getTime)
          this.Time[i] = this.Time[i-1];
+
       if(useAppliedPrice)
          this.Price[i] = this.Price[i-1];
+
       if(getVolumes)
       {
          this.Tick_volume[i] = this.Tick_volume[i-1];
@@ -324,8 +343,10 @@ void TickChartIndicator::OLHCShiftRight()
    
    if(getTime)
       this.Time[0] = 0;
+
    if(useAppliedPrice)
       this.Price[0] = 0.0;
+
    if(getVolumes)
    {
       this.Tick_volume[0] = 0.0;
@@ -353,8 +374,10 @@ void TickChartIndicator::OLHCResize()
    
    if(getTime)
       ArrayResize(this.Time,count+1);
+
    if(useAppliedPrice)
       ArrayResize(this.Price,count+1);
+
    if(getVolumes)
    {
       ArrayResize(this.Tick_volume,count+1);
@@ -376,8 +399,6 @@ bool TickChartIndicator::Canvas_IsNewBar(const datetime &_Time[])
    datetime now = _Time[0]; 
    ArraySetAsSeries(_Time,false);    
    
-   static datetime prevTime = 0;
-   
    if(prevTime != now)
    {
       prevTime = now;
@@ -388,9 +409,7 @@ bool TickChartIndicator::Canvas_IsNewBar(const datetime &_Time[])
 }
 
 bool TickChartIndicator::Canvas_IsRatesTotalChanged(int ratesTotalNow)
-{
-   static int prevRatesTotal = 0;
-   
+{   
    if(prevRatesTotal == 0)
       prevRatesTotal = ratesTotalNow;
          
@@ -406,7 +425,6 @@ bool TickChartIndicator::Canvas_IsRatesTotalChanged(int ratesTotalNow)
 int TickChartIndicator::Canvas_RatesTotalChangedBy(int ratesTotalNow)
 {
    int changedBy = 0;
-   static int prevRatesTotal = 0;
    
    if(prevRatesTotal == 0)
       prevRatesTotal = ratesTotalNow;
@@ -464,11 +482,11 @@ int TickChartIndicator::GetOLHCForIndicatorCalc(double &o[],double &l[],double &
    handle = tickChart.GetHandle();
    if(handle == INVALID_HANDLE)
       return -1;
+
    int __count = CopyBuffer(handle,TICKCHART_OPEN,start,count,temp);
    if(__count == -1)
    {
-      int errorCode = GetLastError();
-      if(errorCode == ERR_INDICATOR_DATA_NOT_FOUND)
+      if(GetLastError() == ERR_INDICATOR_DATA_NOT_FOUND)
       {
          Print("Waiting for buffers ready flag");
          return -2;
@@ -487,19 +505,23 @@ int TickChartIndicator::GetOLHCForIndicatorCalc(double &o[],double &l[],double &
       ArrayInitialize(l,0x0);
       ArrayInitialize(h,0x0);
       ArrayInitialize(c,0x0);
+      
       if(getTime)
          ArrayInitialize(t,0x0);
+         
       if(getVolumes)
       {
          ArrayInitialize(tickVolume,0x0);
          ArrayInitialize(realVolume,0x0);
       }
+      
       if(getVolumeBreakdown)
       {
          ArrayInitialize(buyVolume,0x0);
          ArrayInitialize(sellVolume,0x0);
          ArrayInitialize(buySellVolume,0x0);
       }
+      
       // less data - indicator requres more
       
       ArrayCopy(o,temp,(count-__count),0);
@@ -514,12 +536,14 @@ int TickChartIndicator::GetOLHCForIndicatorCalc(double &o[],double &l[],double &
 
       if(CopyBuffer(handle,TICKCHART_CLOSE,start,__count,temp) == -1)
          return -1;
+
       ArrayCopy(c,temp,(count-__count),0);
       
       if(getTime)
       {
          if(CopyBuffer(handle,TICKCHART_BAR_OPEN_TIME,start,__count,temp) == -1)
             return -1;
+            
          ArrayCopy(t,temp,(count-__count),0);      
       }
       
@@ -527,10 +551,12 @@ int TickChartIndicator::GetOLHCForIndicatorCalc(double &o[],double &l[],double &
       {
          if(CopyBuffer(handle,TICKCHART_TICK_VOLUME,start,__count,temp) == -1)
             return -1;
+            
          ArrayCopy(tickVolume,temp,(count-__count),0);
    
          if(CopyBuffer(handle,TICKCHART_REAL_VOLUME,start,__count,temp) == -1)
             return -1;
+            
          ArrayCopy(realVolume,temp,(count-__count),0);      
       }
       
@@ -540,14 +566,17 @@ int TickChartIndicator::GetOLHCForIndicatorCalc(double &o[],double &l[],double &
       {      
          if(CopyBuffer(handle,TICKCHART_BUY_VOLUME,start,__count,temp) == -1)
             return -1;
+            
          ArrayCopy(buyVolume,temp,(count-__count),0);
 
          if(CopyBuffer(handle,TICKCHART_SELL_VOLUME,start,__count,temp) == -1)
             return -1;
+            
          ArrayCopy(sellVolume,temp,(count-__count),0);
 
          if(CopyBuffer(handle,TICKCHART_BUYSELL_VOLUME,start,__count,temp) == -1)
             return -1;
+            
          ArrayCopy(buySellVolume,temp,(count-__count),0);
       }
    #else
@@ -557,14 +586,17 @@ int TickChartIndicator::GetOLHCForIndicatorCalc(double &o[],double &l[],double &
       {      
          if(CopyBuffer(handle,TICKCHART_BUY_VOLUME,start,__count,temp) == -1)
             return -1;
+            
          ArrayCopy(buyVolume,temp,(count-__count),0);
 
          if(CopyBuffer(handle,TICKCHART_SELL_VOLUME,start,__count,temp) == -1)
             return -1;
+            
          ArrayCopy(sellVolume,temp,(count-__count),0);
 
          if(CopyBuffer(handle,TICKCHART_BUYSELL_VOLUME,start,__count,temp) == -1)
             return -1;
+            
          ArrayCopy(buySellVolume,temp,(count-__count),0);
       }
 #endif
@@ -574,10 +606,13 @@ int TickChartIndicator::GetOLHCForIndicatorCalc(double &o[],double &l[],double &
    {
       if(CopyBuffer(handle,TICKCHART_OPEN,start,count,o) == -1)
          return -1;
+         
       if(CopyBuffer(handle,TICKCHART_LOW,start,count,l) == -1)
          return -1;
+         
       if(CopyBuffer(handle,TICKCHART_HIGH,start,count,h) == -1)
          return -1;
+         
       if(CopyBuffer(handle,TICKCHART_CLOSE,start,count,c) == -1)
          return -1;
       
@@ -585,6 +620,7 @@ int TickChartIndicator::GetOLHCForIndicatorCalc(double &o[],double &l[],double &
       {
          if(CopyBuffer(handle,TICKCHART_BAR_OPEN_TIME,start,count,temp) == -1)
             return -1;
+            
          ArrayCopy(t,temp);
       }   
       
@@ -592,9 +628,12 @@ int TickChartIndicator::GetOLHCForIndicatorCalc(double &o[],double &l[],double &
       {
          if(CopyBuffer(handle,TICKCHART_TICK_VOLUME,start,count,temp) == -1)
             return -1;
+            
          ArrayCopy(tickVolume,temp);
+         
          if(CopyBuffer(handle,TICKCHART_REAL_VOLUME,start,count,temp) == -1)
             return -1;   
+         
          ArrayCopy(realVolume,temp);
       }
       
@@ -604,14 +643,17 @@ int TickChartIndicator::GetOLHCForIndicatorCalc(double &o[],double &l[],double &
       {      
          if(CopyBuffer(handle,TICKCHART_BUY_VOLUME,start,count,temp) == -1)
             return -1;
+            
          ArrayCopy(buyVolume,temp);
 
          if(CopyBuffer(handle,TICKCHART_SELL_VOLUME,start,count,temp) == -1)
             return -1;
+            
          ArrayCopy(sellVolume,temp);
 
          if(CopyBuffer(handle,TICKCHART_BUYSELL_VOLUME,start,count,temp) == -1)
             return -1;
+            
          ArrayCopy(buySellVolume,temp);
       }
    #else
@@ -621,14 +663,17 @@ int TickChartIndicator::GetOLHCForIndicatorCalc(double &o[],double &l[],double &
       {      
          if(CopyBuffer(handle,TICKCHART_BUY_VOLUME,start,count,temp) == -1)
             return -1;
+            
          ArrayCopy(buyVolume,temp);
 
          if(CopyBuffer(handle,TICKCHART_SELL_VOLUME,start,count,temp) == -1)
             return -1;
+            
          ArrayCopy(sellVolume,temp);
 
          if(CopyBuffer(handle,TICKCHART_BUYSELL_VOLUME,start,count,temp) == -1)
             return -1;
+            
          ArrayCopy(buySellVolume,temp);
       }
 #endif      
@@ -638,7 +683,7 @@ int TickChartIndicator::GetOLHCForIndicatorCalc(double &o[],double &l[],double &
 }
 
 //
-// Get "count" Renko MqlRates into "ratesInfoArray[]" array starting from "start" bar  
+// Get "count" custom chart's MqlRates into "ratesInfoArray[]" array starting from "start" bar  
 //
 
 int TickChartIndicator::GetOLHCAndApplPriceForIndicatorCalc(double &o[],double &l[],double &h[],double &c[],datetime &t[],long &tickVolume[],long &realVolume[],double &buyVolume[], double &sellVolume[], double &buySellVolume[],double &price[],ENUM_APPLIED_PRICE _applied_price, int start, int count)
@@ -681,10 +726,13 @@ int TickChartIndicator::GetOLHCAndApplPriceForIndicatorCalc(double &o[],double &
    return __count;
 }
 
+// TFMigrate: 
+// https://www.mql5.com/en/forum/2842#comment_39496
+//
 ENUM_TIMEFRAMES TickChartIndicator::TFMigrate(int tf)
-  {
+{
    switch(tf)
-     {
+   {
       case 0: return(PERIOD_CURRENT);
       case 1: return(PERIOD_M1);
       case 5: return(PERIOD_M5);
@@ -712,18 +760,30 @@ ENUM_TIMEFRAMES TickChartIndicator::TFMigrate(int tf)
       case 16408: return(PERIOD_D1);
       case 32769: return(PERIOD_W1);
       case 49153: return(PERIOD_MN1);      
+
       default: return(PERIOD_CURRENT);
-     }
-  }
+   }
+}
 
 datetime TickChartIndicator::iTime(string symbol,int tf,int index)
 {
-   if(index < 0) return(-1);
+   if(index < 0)
+   {
+      return(-1);
+   }
+   
    ENUM_TIMEFRAMES timeframe=TFMigrate(tf);
+   
    datetime Arr[];
-   if(CopyTime(symbol, timeframe, index, 1, Arr)>0)
-        return(Arr[0]);
-   else return(-1);
+   
+   if(CopyTime(symbol, timeframe, index, 1, Arr) > 0)
+   {
+      return(Arr[0]);
+   }
+   else 
+   {
+      return(-1);
+   }
 }
 
 //
@@ -778,3 +838,44 @@ void TickChartIndicator::BufferShiftLeft(double &buffer[])
       buffer[i-1] = buffer[i];
 
 }
+
+
+long TickChartIndicator::GetArrayValueLong(long &arr[], int index)
+{
+   int size  = ArraySize(arr);
+   if(index < size)
+   {
+       return(arr[index]);
+   } 
+   else    
+   {
+       return(false); 
+   }
+}
+
+double TickChartIndicator::GetArrayValueDouble(double &arr[], int index)
+{
+   int size  = ArraySize(arr);
+   if(index < size)
+   {
+       return(arr[index]);
+   } 
+   else    
+   {
+       return(false); 
+   }
+}
+
+datetime TickChartIndicator::GetArrayValueDateTime(datetime &arr[], int index)
+{
+   int size  = ArraySize(arr);
+   if(index < size)
+   {
+       return(arr[index]);
+   } 
+   else    
+   {
+       return(false); 
+   }
+}
+
