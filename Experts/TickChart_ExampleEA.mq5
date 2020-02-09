@@ -7,11 +7,11 @@
 // SHOW_INDICATOR_INPUTS *NEEDS* to be defined, if the EA needs to be *tested in MT5's backtester*
 // -------------------------------------------------------------------------------------------------
 // Using '#define SHOW_INDICATOR_INPUTS' will show the TickChart indicator's inputs 
-// NOT using the '#define SHOW_INDICATOR_INPUTS' statement will read the settigns a chart with 
+// NOT using the '#define SHOW_INDICATOR_INPUTS' statement will read the settigns from the chart with 
 // the TickChart indicator attached.
 //
 
-#define SHOW_INDICATOR_INPUTS
+//#define SHOW_INDICATOR_INPUTS
 
 //
 // You need to include the TickChart.mqh header file
@@ -54,7 +54,7 @@ void OnDeinit(const int reason)
 }
 
 //
-//  At this point you may use the tick chart data fetching methods in your EA.
+//  At this point, you may use the tick chart data fetching methods in your EA.
 //  Brief demonstration presented below in the OnTick() function:
 //
 
