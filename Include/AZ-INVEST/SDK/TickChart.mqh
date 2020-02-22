@@ -2,7 +2,7 @@
 #property link      "http://www.az-invest.eu"
 
 #ifdef DEVELOPER_VERSION
-   #define TICKCHART_INDICATOR_NAME "TickChart\\TickChart300" 
+   #define TICKCHART_INDICATOR_NAME "TickChart\\TickChart303" 
 #else
    #ifdef AMP_VERSION
       #define TICKCHART_INDICATOR_NAME "DTA Tickchart" 
@@ -201,12 +201,8 @@ int TickChart::Init()
                                        PDLColor,
                                        PDCColor,   
                                        showCurrentBarOpenTime,
-                                       NewBarAlert,
-                                       ReversalBarAlert,
-                                       MaCrossAlert,
-                                       UseAlertWindow,
-                                       UseSound,    
-                                       UsePushNotifications,
+                                       AlertMeWhen,
+                                       AlertNotificationType,
                                        SoundFileBull,
                                        SoundFileBear,
                                        cis.MA1on, 

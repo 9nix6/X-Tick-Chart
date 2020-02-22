@@ -1,7 +1,9 @@
 #property copyright "Copyright 2019-2020, Level Up"
 #property link      "https://www.az-invest.eu"
-#property version   "3.00"
+#property version   "3.01"
 #property description "Example EA showing the way to use the TickChart class defined in TickChart.mqh" 
+
+input int InpRSIPeriod = 14; // RSI period
 
 //
 // SHOW_INDICATOR_INPUTS *NEEDS* to be defined, if the EA needs to be *tested in MT5's backtester*
@@ -61,8 +63,22 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
+
+int rsiHandle = INVALID_HANDLE; // Handle for the external RSI indicator
+
 void OnTick()
 {
+   //
+   // Initialize all additional indicators here! (not in the OnInit() function).
+   // Otherwise they will not work in the backtest.
+   // When backtesting please select the "Daily" timeframe.
+   //
+   
+   if(rsiHandle == INVALID_HANDLE)
+   {
+      rsiHandle = iCustom(_Symbol, _Period, "TickChart\\TickChart_RSI", InpRSIPeriod, true);
+   }
+
    //
    // It is considered good trading & EA coding practice to perform calculations
    // when a new bar is fully formed. 
@@ -70,7 +86,7 @@ void OnTick()
    //
       
    if(tickChart.IsNewBar())
-   {
+   {  
       //
       //  There are two methods for getting the Moving Average values.
       //  The example below gets the moving average values for 3 latest bars

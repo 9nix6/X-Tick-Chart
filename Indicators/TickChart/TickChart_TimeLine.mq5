@@ -1,6 +1,6 @@
-#property copyright "Copyright 2018, AZ-iNVEST"
-#property link      "http://www.az-invest.eu"
-#property version   "1.01"
+#property copyright "Copyright 2018-2020, Level Up Software"
+#property link      "https://www.az-invest.eu"
+#property version   "1.03"
 #property indicator_separate_window
 #property indicator_plots 0
 
@@ -20,8 +20,10 @@ enum ENUM_DISPLAY_FORMAT
 
 input color                InpTextColor = clrWhiteSmoke;    // Font color
 input int                  InpFontSize  = 9;                // Font size
-input int                  InpSpacing = 8;                  // Date/Time spacing
+input int                  InpSpacing = 3;                  // Date/Time spacing factor
 input ENUM_DISPLAY_FORMAT  InpDispFormat = DisplayFormat1;  // Display format
+
+int __spacing = InpSpacing;
 
 //+------------------------------------------------------------------+
 //| Custom indicator initialization function                         |
@@ -31,12 +33,14 @@ int OnInit()
    //--- indicator buffers mapping
    IndicatorSetString(INDICATOR_SHORTNAME,"\n");
    IndicatorSetDouble(INDICATOR_MINIMUM,0); 
-   IndicatorSetDouble(INDICATOR_MAXIMUM,9);  
-   IndicatorSetInteger(INDICATOR_HEIGHT,28);  
+   IndicatorSetDouble(INDICATOR_MAXIMUM, 9);  
+   IndicatorSetInteger(INDICATOR_HEIGHT,16);  
    IndicatorSetInteger(INDICATOR_DIGITS,0);
    //---
 
    customChartIndicator.SetGetTimeFlag();   
+   
+   RecalcSpacing();
 
    return(INIT_SUCCEEDED);
 }
@@ -59,7 +63,10 @@ int OnCalculate(const int rates_total,
                 const long &volume[],
                 const int &spread[])
 {
-   if(!customChartIndicator.OnCalculate(rates_total,prev_calculated,time))
+   if(!customChartIndicator.OnCalculate(rates_total,prev_calculated,time,close))
+      return(0);
+      
+   if(!customChartIndicator.BufferSynchronizationCheck(close))
       return(0);
       
    int start = customChartIndicator.GetPrevCalculated() - 1;
@@ -69,13 +76,44 @@ int OnCalculate(const int rates_total,
 
    if((start == 0) || customChartIndicator.IsNewBar)
    {
-      ObjectsDeleteAll(__chartId,PREFIX_SEED);
-      DrawTimeLine(0,rates_total,time);            
+      DrawTimeLine(0,customChartIndicator.GetRatesTotal(),time);            
    }
 
    //--- return value of prev_calculated for next call
    return(rates_total);
 }
+
+
+bool RecalcSpacing()
+{
+   static int __prevScale = 5;
+          int __currentScale = (int)ChartGetInteger(0, CHART_SCALE);
+   
+   if(__prevScale == __currentScale)
+   {
+      return false;
+   }
+
+   switch(__currentScale)
+   {
+      case 5: __spacing = InpSpacing;
+      break;
+      case 4: __spacing = InpSpacing * 2;
+      break;
+      case 3: __spacing = InpSpacing * 4;
+      break;
+      case 2: __spacing = InpSpacing * 8;
+      break;
+      case 1: __spacing = InpSpacing * 16;
+      break;
+      case 0: __spacing = InpSpacing * 32;   
+      break;
+   }
+   
+   __prevScale = __currentScale;   
+   return true;
+}
+
 //+------------------------------------------------------------------+
 
 void DrawTimeLine(const int nPosition, const int nRatesCount, const datetime &canvasTime[])
@@ -84,15 +122,17 @@ void DrawTimeLine(const int nPosition, const int nRatesCount, const datetime &ca
    bool     _start = false;
    int      c = 0;
    
-   for(int i=nPosition;i<nRatesCount;i++)
+   ObjectsDeleteAll(__chartId,PREFIX_SEED);
+   
+   for(int i=nPosition; i<nRatesCount; i++)
    {
-      curBarTime = (datetime)customChartIndicator.Time[i];
+      curBarTime = customChartIndicator.GetTime(i);
       if(curBarTime == 0)
          continue;
       else
          _start = true;
          
-      if(c%InpSpacing == 0)
+      if(c%__spacing == 0)
          DrawDateTimeMarker(i,curBarTime,canvasTime[i]);
       
       if(_start)
@@ -127,6 +167,28 @@ string NormalizeTime(datetime _dt)
       string month = (dt.mon<10) ? ("0"+(string)dt.mon) : (string)dt.mon;
       return ( "'"+(string)dt.day+"."+month+" "+hour+":"+minute );
    }
+}
+
+//+------------------------------------------------------------------+
+//| ChartEvent function                                              |
+//+------------------------------------------------------------------+
+void OnChartEvent(const int id,
+                  const long &lparam,
+                  const double &dparam,
+                  const string &sparam)
+{
+
+   if(id==CHARTEVENT_CHART_CHANGE)
+   {      
+      if(RecalcSpacing() == false)
+         return;
+      
+      datetime __time[];
+      CopyTime(_Symbol,_Period,0,Bars(_Symbol,_Period),__time);
+      
+      DrawTimeLine(0,customChartIndicator.GetRatesTotal(),__time);            
+   }
+
 }
 
 //

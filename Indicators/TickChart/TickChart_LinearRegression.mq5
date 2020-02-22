@@ -43,8 +43,12 @@ int OnCalculate(const int rates_total,const int prev_calculated,
 
    ////////////////////////////////////////////////////////////////////////
 
-   if(!customChartIndicator.OnCalculate(rates_total,prev_calculated,Time))
-      return(0);   
+   if(!customChartIndicator.OnCalculate(rates_total,prev_calculated,Time,Close))
+      return(0);
+      
+   if(!customChartIndicator.BufferSynchronizationCheck(Close))
+      return(0);
+
    int _prev_calculated = customChartIndicator.GetPrevCalculated();    
    
    ////////////////////////////////////////////////////////////////////////
@@ -67,7 +71,7 @@ int OnCalculate(const int rates_total,const int prev_calculated,
       Sxy = 0;
       for (int x = 1; x <= LRPeriod; x++)
       {
-         double y = customChartIndicator.Price[bar-LRPeriod+x];
+         double y = customChartIndicator.GetPrice(bar-LRPeriod+x);
          Sx  += x;
          Sy  += y;
          Sxx += x*x;

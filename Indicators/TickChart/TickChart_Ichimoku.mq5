@@ -119,7 +119,10 @@ int OnCalculate(const int rates_total,
    // Process data through TickChart indicator
    //
    
-   if(!customChartIndicator.OnCalculate(rates_total,prev_calculated,time))
+   if(!customChartIndicator.OnCalculate(rates_total,prev_calculated,time,close))
+      return(0);
+   
+   if(!customChartIndicator.BufferSynchronizationCheck(close))
       return(0);
    
    //

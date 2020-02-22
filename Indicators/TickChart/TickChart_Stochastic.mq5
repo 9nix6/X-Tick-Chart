@@ -73,7 +73,10 @@ int OnCalculate(const int rates_total,const int prev_calculated,
    // Process data through MedianRenko indicator
    //
    
-   if(!customChartIndicator.OnCalculate(rates_total,prev_calculated,Time))
+   if(!customChartIndicator.OnCalculate(rates_total,prev_calculated,Time,Close))
+      return(0);
+   
+   if(!customChartIndicator.BufferSynchronizationCheck(Close))
       return(0);
    
    //

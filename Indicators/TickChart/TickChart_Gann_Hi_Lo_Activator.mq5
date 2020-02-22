@@ -108,8 +108,12 @@ int OnCalculate(const int rates_total,
 {                
    if (Bars(_Symbol,_Period)<rates_total) return(-1);
 
-   if(!customChartIndicator.OnCalculate(rates_total,prev_calculated,time))
+   if(!customChartIndicator.OnCalculate(rates_total,prev_calculated,time,close))
       return(0);
+      
+   if(!customChartIndicator.BufferSynchronizationCheck(close))
+      return(0);
+
    int _prev_calculated = customChartIndicator.GetPrevCalculated();
          
            

@@ -58,7 +58,10 @@ int OnCalculate(const int rates_total,const int prev_calculated,
                 const int &Spread[])
   {
    
-   if(!customChartIndicator.OnCalculate(rates_total,prev_calculated,Time))
+   if(!customChartIndicator.OnCalculate(rates_total,prev_calculated,Time,Close))
+      return(0);
+      
+   if(!customChartIndicator.BufferSynchronizationCheck(Close))
       return(0);
    
    int _prev_calculated = customChartIndicator.GetPrevCalculated();

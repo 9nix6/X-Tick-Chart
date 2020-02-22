@@ -12,7 +12,7 @@
 #property indicator_type1   DRAW_COLOR_HISTOGRAM
 #property indicator_color1  Green,Red
 #property indicator_style1  0
-#property indicator_width1  1
+#property indicator_width1  2
 #property indicator_minimum 0.0
 //--- input data
 input ENUM_APPLIED_VOLUME InpVolumeType=VOLUME_TICK; // Volumes
@@ -23,9 +23,8 @@ double                    ExtColorsBuffer[];
 //
 //
 //
-
 #include <AZ-INVEST/SDK/TickChartIndicator.mqh>
-TickChartIndicator tickChartIndicator;
+TickChartIndicator customChartIndicator;
 
 //
 //
@@ -44,7 +43,7 @@ void OnInit()
 //---- indicator digits
    IndicatorSetInteger(INDICATOR_DIGITS,0);
    
-   tickChartIndicator.SetGetVolumesFlag();
+   customChartIndicator.SetGetVolumesFlag();
 //----
   }
 //+------------------------------------------------------------------+
@@ -69,33 +68,36 @@ int OnCalculate(const int rates_total,
    // Process data through XTickChart indicator
    //
    
-   if(!tickChartIndicator.OnCalculate(rates_total,prev_calculated,time))
+   if(!customChartIndicator.OnCalculate(rates_total,prev_calculated,time,close))
+      return(0);
+
+   if(!customChartIndicator.BufferSynchronizationCheck(close))
       return(0);
 
    //
    // Make the following modifications in the code below:
    //
-   // tickChartIndicator.GetPrevCalculated() should be used instead of prev_calculated
+   // customChartIndicator.GetPrevCalculated() should be used instead of prev_calculated
    //
-   // tickChartIndicator.Open[] should be used instead of open[]
-   // tickChartIndicator.Low[] should be used instead of low[]
-   // tickChartIndicator.High[] should be used instead of high[]
-   // tickChartIndicator.Close[] should be used instead of close[]
+   // customChartIndicator.Open[] should be used instead of open[]
+   // customChartIndicator.Low[] should be used instead of low[]
+   // customChartIndicator.High[] should be used instead of high[]
+   // customChartIndicator.Close[] should be used instead of close[]
    //
-   // tickChartIndicator.IsNewBar (true/false) informs you if a bar has completed
+   // customChartIndicator.IsNewBar (true/false) informs you if a bar has completed
    //
-   // tickChartIndicator.Time[] shold be used instead of Time[] for checking the tick chart bar time.
-   // (!) tickChartIndicator.SetGetTimeFlag() must be called in OnInit() for tickChartIndicator.Time[] to be used
+   // customChartIndicator.Time[] shold be used instead of Time[] for checking the tick chart bar time.
+   // (!) customChartIndicator.SetGetTimeFlag() must be called in OnInit() for customChartIndicator.Time[] to be used
    //
-   // tickChartIndicator.Tick_volume[] should be used instead of TickVolume[]
-   // tickChartIndicator.Real_volume[] should be used instead of Volume[]
-   // (!) tickChartIndicator.SetGetVolumesFlag() must be called in OnInit() for Tick_volume[] & Real_volume[] to be used
+   // customChartIndicator.Tick_volume[] should be used instead of TickVolume[]
+   // customChartIndicator.Real_volume[] should be used instead of Volume[]
+   // (!) customChartIndicator.SetGetVolumesFlag() must be called in OnInit() for Tick_volume[] & Real_volume[] to be used
    //
-   // tickChartIndicator.Price[] should be used instead of Price[]
-   // (!) tickChartIndicator.SetUseAppliedPriceFlag(ENUM_APPLIED_PRICE _applied_price) must be called in OnInit() for tickChartIndicator.Price[] to be used
+   // customChartIndicator.Price[] should be used instead of Price[]
+   // (!) customChartIndicator.SetUseAppliedPriceFlag(ENUM_APPLIED_PRICE _applied_price) must be called in OnInit() for customChartIndicator.Price[] to be used
    //
    
-   int _prev_calculated = tickChartIndicator.GetPrevCalculated();
+   int _prev_calculated = customChartIndicator.GetPrevCalculated();
    
    //
    //
@@ -106,10 +108,11 @@ int OnCalculate(const int rates_total,
 //--- correct position
    if(start<1) start=1;
 //--- main cycle
+
    if(InpVolumeType==VOLUME_TICK)
-      CalculateVolume(start,rates_total,tickChartIndicator.Tick_volume);
+      CalculateVolume(start,rates_total,customChartIndicator.Tick_volume);
    else
-      CalculateVolume(start,rates_total,tickChartIndicator.Real_volume);
+      CalculateVolume(start,rates_total,customChartIndicator.Real_volume);
 //--- OnCalculate done. Return new prev_calculated.
    return(rates_total);
   }

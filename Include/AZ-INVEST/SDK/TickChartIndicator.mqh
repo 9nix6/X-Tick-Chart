@@ -1,9 +1,10 @@
 #property copyright "Copyright 2018-2020, Level Up Software"
 #property link      "http://www.az-invest.eu"
-#property version   "4.00"
+#property version   "4.01"
 
 input bool UseOnTickChart = true; // Use this indicator with TickChart handle
 
+//#define DEVELOPER_VERSION
 #include <AZ-INVEST/SDK/TickChart.mqh>
 
 class TickChartIndicator
@@ -50,8 +51,7 @@ class TickChartIndicator
       double   GetBuy_volume(int index)  { return GetArrayValueDouble(Buy_volume, index); };
       double   GetSell_volume(int index) { return GetArrayValueDouble(Sell_volume, index); };
       double   GetBuySell_volume(int index) { return GetArrayValueDouble(BuySell_volume, index); };
-   
-   
+      
       bool     IsNewBar;
    
                TickChartIndicator();
@@ -62,8 +62,9 @@ class TickChartIndicator
       void     SetGetVolumeBreakdownFlag() { this.getVolumeBreakdown = true; };
       void     SetGetTimeFlag() { this.getTime = true; };
       
-      bool     OnCalculate(const int rates_total,const int prev_calculated, const datetime &_Time[]);
+      bool     OnCalculate(const int _rates_total,const int _prev_calculated, const datetime &_Time[], const double &_Close[]);
       void     OnDeinit(const int reason);
+      bool     BufferSynchronizationCheck(const double &buffer[]);      
       int      GetPrevCalculated() { return prev_calculated; };     
       int      GetRatesTotal() { return ArraySize(Open); };     
       void     BufferShiftLeft(double &buffer[]);
@@ -141,7 +142,7 @@ void TickChartIndicator::OnDeinit(const int reason)
 {
 }
 
-bool TickChartIndicator::OnCalculate(const int _rates_total,const int _prev_calculated, const datetime &_Time[])
+bool TickChartIndicator::OnCalculate(const int _rates_total,const int _prev_calculated, const datetime &_Time[], const double &_Close[])
 {   
    if(firstRun)
    {
@@ -174,7 +175,7 @@ bool TickChartIndicator::OnCalculate(const int _rates_total,const int _prev_calc
    ArraySetAsSeries(this.Real_volume,false);   
    ArraySetAsSeries(this.Buy_volume,false);   
    ArraySetAsSeries(this.Sell_volume,false);   
-   ArraySetAsSeries(this.BuySell_volume,false);   
+   ArraySetAsSeries(this.BuySell_volume,false);      
    
    if(firstRun)
    {
@@ -186,7 +187,8 @@ bool TickChartIndicator::OnCalculate(const int _rates_total,const int _prev_calc
    {
       GetOLHC(0,_rates_total);
       this.prev_calculated = 0;
-      
+      firstRun = true; 
+      ChartSetSymbolPeriod(ChartID(), _Symbol, _Period); // try to force reload
       return false;
    }                    
                 
@@ -240,6 +242,7 @@ bool TickChartIndicator::OnCalculate(const int _rates_total,const int _prev_calc
    {
       GetOLHC(0,_rates_total);
       this.prev_calculated = 0;
+      firstRun = true; 
       return true;
    } 
    
@@ -249,7 +252,20 @@ bool TickChartIndicator::OnCalculate(const int _rates_total,const int _prev_calc
    
    GetOLHC(0,0);
    this.prev_calculated = _prev_calculated;
+   
+   return true;
+}
 
+bool TickChartIndicator::BufferSynchronizationCheck(const double &buffer[])
+{
+   if(ArraySize(buffer) != ArraySize(Close))
+   {
+      #ifdef DEVELOPER_VERSION
+         Print("### buffers out of synch - refreshing...");
+      #endif
+      return false;
+   }
+   
    return true;
 }
 

@@ -79,10 +79,14 @@ int OnCalculate(const int rates_total,const int prev_calculated,
    // Precoess data through MedianRenko indicator
    //
    
-   if(!customChartIndicator.OnCalculate(rates_total,prev_calculated,Time))
+   if(!customChartIndicator.OnCalculate(rates_total,prev_calculated,Time,Close))
+      return(0);
+
+   if(!customChartIndicator.BufferSynchronizationCheck(Close))
       return(0);
 
    int _prev_calculated = customChartIndicator.GetPrevCalculated();
+   int _rates_total = customChartIndicator.GetRatesTotal();
       
    //
    //
@@ -99,6 +103,7 @@ int OnCalculate(const int rates_total,const int prev_calculated,
       to_copy=rates_total-_prev_calculated;
       if(_prev_calculated>0) to_copy++;
      }
+     
 //--- get Fast EMA buffer
    if(IsStopped()) return(0); //Checking for stop flag   
    ExponentialMAOnBuffer(rates_total,_prev_calculated,0,InpFastEMA,customChartIndicator.Close,ExtFastMaBuffer);

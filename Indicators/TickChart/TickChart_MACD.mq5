@@ -71,29 +71,35 @@ int OnCalculate(const int rates_total,const int prev_calculated,
                 const int &Spread[])
   {
    
-   if(!customChartIndicator.OnCalculate(rates_total,prev_calculated,Time))
+   if(!customChartIndicator.OnCalculate(rates_total,prev_calculated,Time,Close))
+      return(0);
+      
+   if(!customChartIndicator.BufferSynchronizationCheck(Close))
       return(0);
 
    int _prev_calculated = customChartIndicator.GetPrevCalculated();
+   int _rates_total = customChartIndicator.GetRatesTotal();
    
-     
+   
+
 //--- check for data
-   if(rates_total<InpSignalSMA)
+   if(_rates_total<InpSignalSMA)
       return(0);
 //--- we can copy not all data
    int to_copy;
-   if(_prev_calculated>rates_total || _prev_calculated<0) to_copy=rates_total;
+   if(_prev_calculated>_rates_total || _prev_calculated<0) to_copy=_rates_total;
    else
      {
-      to_copy=rates_total-_prev_calculated;
+      to_copy=_rates_total-_prev_calculated;
       if(_prev_calculated>0) to_copy++;
      }
+       
 //--- get Fast EMA buffer
    if(IsStopped()) return(0); //Checking for stop flag   
-   ExponentialMAOnBuffer(rates_total,_prev_calculated,0,InpFastEMA,customChartIndicator.Close,ExtFastMaBuffer);
+   ExponentialMAOnBuffer(_rates_total,_prev_calculated,0,InpFastEMA,customChartIndicator.Close,ExtFastMaBuffer);
 //--- get SlowSMA buffer
    if(IsStopped()) return(0); //Checking for stop flag
-   ExponentialMAOnBuffer(rates_total,_prev_calculated,0,InpSlowEMA,customChartIndicator.Close,ExtSlowMaBuffer);
+   ExponentialMAOnBuffer(_rates_total,_prev_calculated,0,InpSlowEMA,customChartIndicator.Close,ExtSlowMaBuffer);
 //---
    int limit;
    if(_prev_calculated==0)
@@ -101,7 +107,7 @@ int OnCalculate(const int rates_total,const int prev_calculated,
    else limit=_prev_calculated-1;
 //--- calculate MACD
 
-   for(int i=limit;i<rates_total && !IsStopped();i++)
+   for(int i=limit;i<_rates_total && !IsStopped();i++)
    {
       ExtMacdBuffer[i] = ExtFastMaBuffer[i]-ExtSlowMaBuffer[i];
       if(ExtMacdBuffer[i] > 0)
@@ -116,8 +122,9 @@ int OnCalculate(const int rates_total,const int prev_calculated,
       }
    }
 //--- calculate Signal
-   SimpleMAOnBuffer(rates_total,_prev_calculated,0,InpSignalSMA,ExtMacdBuffer,ExtSignalBuffer);
+   SimpleMAOnBuffer(_rates_total,_prev_calculated,0,InpSignalSMA,ExtMacdBuffer,ExtSignalBuffer);
 //--- OnCalculate done. Return new _prev_calculated.
+
    return(rates_total);
   }
 //+------------------------------------------------------------------+
