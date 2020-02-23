@@ -1,5 +1,6 @@
 #property copyright "Copyright 2018-2020, Level Up Software"
 #property link      "https://www.az-invest.eu"
+#property description "A timescale indicator for use on X Tick Chart."
 #property version   "1.03"
 #property indicator_separate_window
 #property indicator_plots 0
@@ -159,6 +160,9 @@ string NormalizeTime(datetime _dt)
    TimeToStruct(_dt,dt);   
    string minute = (dt.min<10)  ? ("0"+(string)dt.min)  : (string)dt.min;
    string hour   = (dt.hour<10) ? ("0"+(string)dt.hour) : (string)dt.hour;
+   
+   if((dt.mon-1) < 0 || (dt.mon-1) > 11)
+      return "*";   
    
    if(InpDispFormat == DisplayFormat1)
       return ( "'"+(string)dt.day+" "+__months[dt.mon-1]+" "+hour+":"+minute );

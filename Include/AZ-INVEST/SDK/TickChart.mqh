@@ -191,7 +191,6 @@ int TickChart::Init()
    tickChartHandle = iCustom(this.tickChartSymbol, _Period, TICKCHART_INDICATOR_NAME, 
                                        s.barSizeInTicks, s.showNumberOfDays, s.resetOpenOnNewTradingDay,
                                        TradingSessionTime,
-                                       TopBottomPaddingPercentage,
                                        showPivots,
                                        pivotPointCalculationType,
                                        RColor,
@@ -200,11 +199,8 @@ int TickChart::Init()
                                        PDHColor,
                                        PDLColor,
                                        PDCColor,   
-                                       showCurrentBarOpenTime,
                                        AlertMeWhen,
                                        AlertNotificationType,
-                                       SoundFileBull,
-                                       SoundFileBear,
                                        cis.MA1on, 
                                        cis.MA1lineType,
                                        cis.MA1period,
@@ -244,8 +240,13 @@ int TickChart::Init()
                                        cis.ChannelPriceLabel,
                                        cis.ChannelMidPriceLabel,
                                        true); // used in EA
-                                       // DisplayAsBarChart & ShiftObj let at defaults
-      
+// TopBottomPaddingPercentage,
+// showCurrentBarOpenTime,
+// SoundFileBull,
+// SoundFileBear,
+// DisplayAsBarChart
+// ShiftObj; all letft at defaults
+
     if(tickChartHandle == INVALID_HANDLE)
     {
       Print(TICKCHART_INDICATOR_NAME+" indicator init failed on error ",GetLastError());
@@ -294,7 +295,6 @@ bool TickChart::Reload()
       return true;
    }    
 
-
    return false;
 }
 
@@ -336,7 +336,8 @@ bool TickChart::IsNewBar()
       return true;
    }
 
-   return false;}
+   return false;
+}
 
 //
 // Get "count" Renko MqlRates into "ratesInfoArray[]" array starting from "start" bar  
@@ -446,8 +447,6 @@ bool TickChart::GetBuySellVolumeBreakdown(double &buy[], double &sell[], double 
    ArrayFree(bs);
    
    return true;
-
-
 }
 
 //
