@@ -6,6 +6,8 @@
 #property copyright   "2009, MetaQuotes Software Corp."
 #property link        "http://www.mql5.com"
 #property description "Moving Average Convergence/Divergence"
+#property description "Adapted for use with TickChart by Artur Zas."
+
 #include <MovingAverages.mqh>
 //--- indicator settings
 #property indicator_separate_window

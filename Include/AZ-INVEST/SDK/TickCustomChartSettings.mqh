@@ -22,13 +22,13 @@
    
    #else // user defined settings
    
-      input int         barSizeInTicks = 610;                     // Ticks per bar
+      input int         barSizeInTicks = 1000;                    // Ticks per bar
       input int         showNumberOfDays = 5;                     // Show history for number of days
       input ENUM_BOOL   resetOpenOnNewTradingDay = true;          // Synchronize first bar's open on new day
    
    #endif
 #else // don't SHOW_INDICATOR_INPUTS 
-      int         barSizeInTicks = 610;                           // Ticks per bar
+      int         barSizeInTicks = 1000;                          // Ticks per bar
       int         showNumberOfDays = 5;                           // Show history for number of days
       ENUM_BOOL   resetOpenOnNewTradingDay = true;                // Synchronize first bar's open on new day
 #endif

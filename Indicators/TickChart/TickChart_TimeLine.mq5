@@ -19,7 +19,7 @@ enum ENUM_DISPLAY_FORMAT
    DisplayFormat2,      // 25.01 10:55
 };
 
-input color                InpTextColor = clrWhiteSmoke;    // Font color
+input color                InpTextColor = clrBlack;    // Font color
 input int                  InpFontSize  = 9;                // Font size
 input int                  InpSpacing = 3;                  // Date/Time spacing factor
 input ENUM_DISPLAY_FORMAT  InpDispFormat = DisplayFormat1;  // Display format

@@ -199,8 +199,17 @@ int TickChart::Init()
                                        PDHColor,
                                        PDLColor,
                                        PDCColor,   
+#ifdef AMP_VERSION                                                                              
+                                       NewBarAlert,
+                                       ReversalBarAlert,
+                                       MaCrossAlert,
+                                       UseAlertWindow,
+                                       UseSound,    
+                                       UsePushNotifications,
+#else
                                        AlertMeWhen,
                                        AlertNotificationType,
+#endif                                       
                                        cis.MA1on, 
                                        cis.MA1lineType,
                                        cis.MA1period,

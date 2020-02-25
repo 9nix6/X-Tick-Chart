@@ -6,6 +6,8 @@
 #property copyright "2009-2017, MetaQuotes Software Corp."
 #property link      "http://www.mql5.com"
 #property description "Ichimoku Kinko Hyo"
+#property description "Adapted for use with TickChart by Artur Zas."
+
 //--- indicator settings
 #property indicator_chart_window
 #property indicator_buffers 5

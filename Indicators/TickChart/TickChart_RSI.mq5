@@ -6,6 +6,7 @@
 #property copyright   "2005-2014, MetaQuotes Software Corp."
 #property link        "https://www.mql5.com"
 #property description "Relative Strength Index"
+#property description "Adapted for use with TickChart by Artur Zas."
 #property strict
 
 #property indicator_separate_window

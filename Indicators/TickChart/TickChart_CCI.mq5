@@ -8,6 +8,8 @@
 #property copyright   "2009, MetaQuotes Software Corp."
 #property link        "http://www.mql5.com"
 #property description "Commodity Channel Index"
+#property description "Adapted for use with TickChart by Artur Zas."
+
 #include <MovingAverages.mqh>
 //---
 #property indicator_separate_window
