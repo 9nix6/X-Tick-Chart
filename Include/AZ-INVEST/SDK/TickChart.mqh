@@ -2,7 +2,7 @@
 #property link      "http://www.az-invest.eu"
 
 #ifdef DEVELOPER_VERSION
-   #define TICKCHART_INDICATOR_NAME "TickChart\\TickChart303" 
+   #define TICKCHART_INDICATOR_NAME "TickChart\\TickChart307" 
 #else
    #ifdef AMP_VERSION
       #define TICKCHART_INDICATOR_NAME "DTA Tickchart" 

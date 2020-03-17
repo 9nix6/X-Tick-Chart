@@ -1,7 +1,8 @@
 #property copyright "Copyright 2019-2020, Level Up"
 #property link      "https://www.az-invest.eu"
-#property version   "3.01"
+#property version   "3.02"
 #property description "Example EA showing the way to use the TickChart class defined in TickChart.mqh" 
+//#define DEVELOPER_VERSION
 
 input int InpRSIPeriod = 14; // RSI period
 
@@ -26,13 +27,18 @@ input int InpRSIPeriod = 14; // RSI period
 //  Example shown below
 //
 
-TickChart tickChart(MQLInfoInteger((int)MQL5_TESTING) ? false : true);
+TickChart *tickChart = NULL;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit()
 {
+   if(tickChart == NULL)
+   {
+      tickChart = new TickChart(MQLInfoInteger((int)MQL5_TESTING) ? false : true);
+   }
+   
    tickChart.Init();
    if(tickChart.GetHandle() == INVALID_HANDLE)
       return(INIT_FAILED);
@@ -48,7 +54,12 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
 {
-   tickChart.Deinit();
+   if(tickChart != NULL)
+   {
+      tickChart.Deinit();
+      delete tickChart;
+      tickChart = NULL;
+   }
    
    //
    //  your custom code goes here...
