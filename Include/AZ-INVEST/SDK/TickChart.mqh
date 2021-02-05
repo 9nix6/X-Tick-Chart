@@ -8,7 +8,11 @@
       #define TICKCHART_INDICATOR_NAME "DTA Tickchart" 
    #else
       #ifdef TICKCHART_LICENSE
-         #define TICKCHART_INDICATOR_NAME "TickChart"
+         #ifdef MQL5_MARKET_VERSION
+            #define TICKCHART_INDICATOR_NAME "Market\\X Tick Chart" 
+         #else 
+            #define TICKCHART_INDICATOR_NAME "TickChart"
+         #endif   
       #else  
          #define TICKCHART_INDICATOR_NAME "Market\\X Tick Chart" 
       #endif
