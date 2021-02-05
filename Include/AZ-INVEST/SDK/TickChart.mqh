@@ -1,4 +1,4 @@
-#property copyright "Copyright 2018-2020, Level Up Software"
+#property copyright "Copyright 2018-2021, Level Up Software"
 #property link      "http://www.az-invest.eu"
 
 #ifdef DEVELOPER_VERSION
@@ -7,7 +7,11 @@
    #ifdef AMP_VERSION
       #define TICKCHART_INDICATOR_NAME "DTA Tickchart" 
    #else
-      #define TICKCHART_INDICATOR_NAME "Market\\X Tick Chart" 
+      #ifdef TICKCHART_LICENSE
+         #define TICKCHART_INDICATOR_NAME "TickChart"
+      #else  
+         #define TICKCHART_INDICATOR_NAME "Market\\X Tick Chart" 
+      #endif
    #endif
 #endif
 
