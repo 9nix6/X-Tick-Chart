@@ -1,17 +1,26 @@
+//#define DEVELOPER_VERSION
+//#define DISPLAY_DEBUG_MSG
 #define MQL5_MARKET_VERSION
 
+//#define P_RENKO_BR_PRO
 //#define ULTIMATE_RENKO_LICENSE
-//#define RANGEBARS_LICENSE
+//#define RANGEBAR_LICENSE
 //#define SECONDSCHART_LICENSE
-#define TICKCHART_LICENSE
-//#define VOLUMECHART_LICENSE
+//#define TICKCHART_LICENSE
+#define VOLUMECHART_LICENSE
+//#define LINEBREAKCHART_LICENSE
+
+#ifdef P_RENKO_BR_PRO
+   #include <AZ-INVEST/SDK/MedianRenkoIndicator.mqh>
+   #define AZINVEST_CCI MedianRenkoIndicator
+#endif
 
 #ifdef TICKCHART_LICENSE
    #include <AZ-INVEST/SDK/TickChartIndicator.mqh>
    #define AZINVEST_CCI TickChartIndicator
 #endif 
 
-#ifdef RANGEBARS_LICENSE
+#ifdef RANGEBAR_LICENSE
    #include <AZ-INVEST/SDK/RangeBarIndicator.mqh>
    #define AZINVEST_CCI RangeBarIndicator
 #endif 
@@ -30,6 +39,12 @@
    #include <AZ-INVEST/SDK/VolumeChartIndicator.mqh>
    #define AZINVEST_CCI VolumeChartIndicator
 #endif
+
+#ifdef LINEBREAKCHART_LICENSE
+   #include <AZ-INVEST/SDK/LineBreakChartIndicator.mqh>
+   #define AZINVEST_CCI LineBreakChartIndicator
+#endif
+
 
 #ifdef AZINVEST_CCI
    AZINVEST_CCI customChartIndicator;

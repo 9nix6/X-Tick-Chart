@@ -1,24 +1,47 @@
 #property copyright "Copyright 2018-2021, Level Up Software"
-#property link      "http://www.az-invest.eu"
+#property link      "https://www.az-invest.eu"
 
 #ifdef DEVELOPER_VERSION
-   #define TICKCHART_INDICATOR_NAME "TickChart\\TickChart307" 
+   #define VOLUMECHART_INDICATOR_NAME "VolumeTickChart\\TickChart3.16" 
 #else
    #ifdef AMP_VERSION
-      #define TICKCHART_INDICATOR_NAME "DTA Tickchart" 
+      #define VOLUMECHART_INDICATOR_NAME "DTA Tickchart" 
    #else
-      #ifdef TICKCHART_LICENSE
+      #ifdef VOLUMECHART_LICENSE
          #ifdef MQL5_MARKET_VERSION
-            #define TICKCHART_INDICATOR_NAME "Market\\X Tick Chart" 
+            #define VOLUMECHART_INDICATOR_NAME "Market\\X Tick Chart" 
          #else 
-            #define TICKCHART_INDICATOR_NAME "TickChart"
+            #define VOLUMECHART_INDICATOR_NAME "TickChart"
          #endif   
       #else  
-         #define TICKCHART_INDICATOR_NAME "Market\\X Tick Chart" 
+         #define VOLUMECHART_INDICATOR_NAME "Market\\X Tick Chart" 
       #endif
    #endif
 #endif
 
+#define VOLUMECHART_OPEN            00
+#define VOLUMECHART_HIGH            01
+#define VOLUMECHART_LOW             02
+#define VOLUMECHART_CLOSE           03 
+#define VOLUMECHART_BAR_COLOR       04
+#define VOLUMECHART_SESSION_RECT_H  05
+#define VOLUMECHART_SESSION_RECT_L  06
+#define VOLUMECHART_MA1             07
+#define VOLUMECHART_MA2             08
+#define VOLUMECHART_MA3             09
+#define VOLUMECHART_MA4             10
+#define VOLUMECHART_CHANNEL_HIGH    11
+#define VOLUMECHART_CHANNEL_MID     12
+#define VOLUMECHART_CHANNEL_LOW     13
+#define VOLUMECHART_BAR_OPEN_TIME   14
+#define VOLUMECHART_TICK_VOLUME     15
+#define VOLUMECHART_REAL_VOLUME     16
+#define VOLUMECHART_BUY_VOLUME      17
+#define VOLUMECHART_SELL_VOLUME     18
+#define VOLUMECHART_BUYSELL_VOLUME  19
+#define VOLUMECHART_RUNTIME_ID      20
+
+// LEGACY CODE
 #define TICKCHART_OPEN            00
 #define TICKCHART_HIGH            01
 #define TICKCHART_LOW             02
@@ -40,25 +63,26 @@
 #define TICKCHART_SELL_VOLUME     18
 #define TICKCHART_BUYSELL_VOLUME  19
 #define TICKCHART_RUNTIME_ID      20
+//
 
-#include <az-invest/sdk/TickCustomChartSettings.mqh>
+#include <az-invest/sdk/VolumeCustomChartSettings.mqh>
 
 class TickChart
 {
    private:
    
-      CTickCustomChartSettigns * tickChartSettings;      
+      CVolumeCustomChartSettigns * volumeChartSettings;      
       
-      int tickChartHandle; //  tick chart indicator handle      
+      int volumeChartHandle; //  tick chart indicator handle      
       string tickChartSymbol;
-      bool usedByIndicatorOnTickChart;
+      bool usedByIndicatorOnVolumeChart;
       
       datetime prevBarTime;      
    
    public:
       
       TickChart();   
-      TickChart(bool isUsedByIndicatorOnTickChart);
+      TickChart(bool isUsedByIndicatorOnVolumeChart);
       TickChart(string symbol);
       ~TickChart(void);
       
@@ -67,7 +91,7 @@ class TickChart
       bool Reload();
       void ReleaseHandle();
       
-      int GetHandle(void) { return tickChartHandle; };
+      int GetHandle(void) { return volumeChartHandle; };
       double GetRuntimeId();
       
       bool IsNewBar();
@@ -94,42 +118,42 @@ class TickChart
 
 TickChart::TickChart(void)
 {
-   tickChartSettings = new CTickCustomChartSettigns();
-   tickChartHandle = INVALID_HANDLE;
+   volumeChartSettings = new CVolumeCustomChartSettigns();
+   volumeChartHandle = INVALID_HANDLE;
    tickChartSymbol = _Symbol;
-   usedByIndicatorOnTickChart = false;
+   usedByIndicatorOnVolumeChart = false;
    prevBarTime = 0;
 }
 
-TickChart::TickChart(bool isUsedByIndicatorOnTickChart)
+TickChart::TickChart(bool isUsedByIndicatorOnVolumeChart)
 {
-   tickChartSettings = new CTickCustomChartSettigns(); 
-   tickChartHandle = INVALID_HANDLE;
+   volumeChartSettings = new CVolumeCustomChartSettigns(); 
+   volumeChartHandle = INVALID_HANDLE;
    tickChartSymbol = _Symbol;
-   usedByIndicatorOnTickChart = isUsedByIndicatorOnTickChart;
+   usedByIndicatorOnVolumeChart = isUsedByIndicatorOnVolumeChart;
    prevBarTime = 0;
 }
 
 TickChart::TickChart(string symbol)
 {
-   tickChartSettings = new CTickCustomChartSettigns();
-   tickChartHandle = INVALID_HANDLE;
+   volumeChartSettings = new CVolumeCustomChartSettigns();
+   volumeChartHandle = INVALID_HANDLE;
    tickChartSymbol = symbol;
-   usedByIndicatorOnTickChart = false;
+   usedByIndicatorOnVolumeChart = false;
    prevBarTime = 0;
 }
 
 TickChart::~TickChart(void)
 {
-   if(tickChartSettings != NULL)
-      delete tickChartSettings;
+   if(volumeChartSettings != NULL)
+      delete volumeChartSettings;
 }
 
 void TickChart::ReleaseHandle()
 { 
-   if(tickChartHandle != INVALID_HANDLE)
+   if(volumeChartHandle != INVALID_HANDLE)
    {
-      IndicatorRelease(tickChartHandle); 
+      IndicatorRelease(volumeChartHandle); 
    }
 }
 
@@ -141,46 +165,46 @@ int TickChart::Init()
 {
    if(!MQLInfoInteger((int)MQL5_TESTING))
    {
-      if(usedByIndicatorOnTickChart) 
+      if(usedByIndicatorOnVolumeChart) 
       {
          //
          // Indicator on Tick Chart uses the values of the TickChart for calculations
          //      
          
-         IndicatorRelease(tickChartHandle);
+         IndicatorRelease(volumeChartHandle);
          
-         tickChartHandle = GetIndicatorHandle();
-         return tickChartHandle;
+         volumeChartHandle = GetIndicatorHandle();
+         return volumeChartHandle;
       }
    
-      if(!tickChartSettings.Load())
+      if(!volumeChartSettings.Load())
       {
-         if(tickChartHandle != INVALID_HANDLE)
+         if(volumeChartHandle != INVALID_HANDLE)
          {
             // could not read new settings - keep old settings
             
-            return tickChartHandle;
+            return volumeChartHandle;
          }
          else
          {
-            Print("Failed to load indicator settings - "+TICKCHART_INDICATOR_NAME+" not on chart");
+            Print("Failed to load indicator settings - "+VOLUMECHART_INDICATOR_NAME+" not on chart");
             return INVALID_HANDLE;
          }
       }   
       
-      if(tickChartHandle != INVALID_HANDLE)
+      if(volumeChartHandle != INVALID_HANDLE)
          Deinit();
 
    }
    else
    {
-      if(usedByIndicatorOnTickChart)
+      if(usedByIndicatorOnVolumeChart)
       {
          //
          // Indicator on Tick Chart uses the values of the TickChart for calculations
          //      
-         tickChartHandle = GetIndicatorHandle();
-         return tickChartHandle;      
+         volumeChartHandle = GetIndicatorHandle();
+         return volumeChartHandle;      
       }
       else
       {     
@@ -188,74 +212,60 @@ int TickChart::Init()
             //
             //  Load settings from EA inputs
             //
-            tickChartSettings.Load();
+            volumeChartSettings.Load();
          #endif
       }
    }   
 
-   TICKCHART_SETTINGS s = tickChartSettings.GetTickChartSettings();         
-   CHART_INDICATOR_SETTINGS cis = tickChartSettings.GetChartIndicatorSettings(); 
+   VOLUMECHART_SETTINGS s = volumeChartSettings.GetVolumeChartSettings();         
+   CHART_INDICATOR_SETTINGS cis = volumeChartSettings.GetChartIndicatorSettings(); 
 
-   tickChartHandle = iCustom(this.tickChartSymbol, _Period, TICKCHART_INDICATOR_NAME, 
-                                       s.barSizeInTicks, s.showNumberOfDays, s.resetOpenOnNewTradingDay,
-                                       TradingSessionTime,
+   volumeChartHandle = iCustom(this.tickChartSymbol, _Period, VOLUMECHART_INDICATOR_NAME, 
+                                       s.barSizeInVolume, 
+                                       s.algorithm, 
+                                       s.showNumberOfDays, 
+                                       s.resetOpenOnNewTradingDay,
+                                       "=",
                                        showPivots,
                                        pivotPointCalculationType,
-                                       RColor,
-                                       PColor,
-                                       SColor,
-                                       PDHColor,
-                                       PDLColor,
-                                       PDCColor,   
-#ifdef AMP_VERSION                                                                              
-                                       NewBarAlert,
-                                       ReversalBarAlert,
-                                       MaCrossAlert,
-                                       UseAlertWindow,
-                                       UseSound,    
-                                       UsePushNotifications,
-#else
+                                       "=",
                                        AlertMeWhen,
                                        AlertNotificationType,
-#endif                                       
-                                       cis.MA1on, 
+                                       "=",
                                        cis.MA1lineType,
                                        cis.MA1period,
                                        cis.MA1method,
                                        cis.MA1applyTo,
                                        cis.MA1shift,
                                        cis.MA1priceLabel,
-                                       cis.MA2on, 
                                        cis.MA2lineType,
                                        cis.MA2period,
                                        cis.MA2method,
                                        cis.MA2applyTo,
                                        cis.MA2shift,
                                        cis.MA2priceLabel,
-                                       cis.MA3on, 
                                        cis.MA3lineType,
                                        cis.MA3period,
                                        cis.MA3method,
                                        cis.MA3applyTo,
                                        cis.MA3shift,
                                        cis.MA3priceLabel,
-                                       cis.MA4on, 
                                        cis.MA4lineType,
                                        cis.MA4period,
                                        cis.MA4method,
                                        cis.MA4applyTo,
                                        cis.MA4shift,
                                        cis.MA4priceLabel,
+                                       "=",
                                        cis.ShowChannel,
                                        cis.ChannelPeriod,
                                        cis.ChannelAtrPeriod,
                                        cis.ChannelAppliedPrice,
                                        cis.ChannelMultiplier,
-#ifndef AMP_VERSION                                       
-                                       cis.ChannelBandsDeviations, 
-#endif                                       
+                                       cis.ChannelBandsDeviations,
                                        cis.ChannelPriceLabel,
                                        cis.ChannelMidPriceLabel,
+                                       "=",
                                        true); // used in EA
 // TopBottomPaddingPercentage,
 // showCurrentBarOpenTime,
@@ -264,16 +274,16 @@ int TickChart::Init()
 // DisplayAsBarChart
 // ShiftObj; all letft at defaults
 
-    if(tickChartHandle == INVALID_HANDLE)
+    if(volumeChartHandle == INVALID_HANDLE)
     {
-      Print(TICKCHART_INDICATOR_NAME+" indicator init failed on error ",GetLastError());
+      Print(VOLUMECHART_INDICATOR_NAME+" indicator init failed on error ",GetLastError());
     }
     else
     {
-      Print(TICKCHART_INDICATOR_NAME+" indicator init OK");
+      Print(VOLUMECHART_INDICATOR_NAME+" indicator init OK");
     }
      
-    return tickChartHandle;
+    return volumeChartHandle;
 }
 
 //
@@ -285,25 +295,25 @@ bool TickChart::Reload()
    bool actionNeeded = false;
    int temp = GetIndicatorHandle();
    
-   if(temp != tickChartHandle)
+   if(temp != volumeChartHandle)
    {
-      IndicatorRelease(tickChartHandle); 
-      tickChartHandle = INVALID_HANDLE;
+      IndicatorRelease(volumeChartHandle); 
+      volumeChartHandle = INVALID_HANDLE;
 
       actionNeeded = true;
    }
    
-   if(tickChartSettings.Changed(GetRuntimeId()))
+   if(volumeChartSettings.Changed(GetRuntimeId()))
    {
       actionNeeded = true;      
    }
    
    if(actionNeeded)
    {
-      if(tickChartHandle != INVALID_HANDLE)
+      if(volumeChartHandle != INVALID_HANDLE)
       {
-         IndicatorRelease(tickChartHandle); 
-         tickChartHandle = INVALID_HANDLE;
+         IndicatorRelease(volumeChartHandle); 
+         volumeChartHandle = INVALID_HANDLE;
       }
 
       if(Init() == INVALID_HANDLE)
@@ -321,15 +331,15 @@ bool TickChart::Reload()
 
 void TickChart::Deinit()
 {
-   if(tickChartHandle == INVALID_HANDLE)
+   if(volumeChartHandle == INVALID_HANDLE)
       return;
       
-   if(!usedByIndicatorOnTickChart)
+   if(!usedByIndicatorOnVolumeChart)
    {
-      if(IndicatorRelease(tickChartHandle))
-         Print(TICKCHART_INDICATOR_NAME+" indicator handle released");
+      if(IndicatorRelease(volumeChartHandle))
+         Print(VOLUMECHART_INDICATOR_NAME+" indicator handle released");
       else 
-         Print("Failed to release "+TICKCHART_INDICATOR_NAME+" indicator handle");
+         Print("Failed to release "+VOLUMECHART_INDICATOR_NAME+" indicator handle");
    }
 }
 
@@ -382,21 +392,21 @@ bool TickChart::GetMqlRates(MqlRates &ratesInfoArray[], int start, int count)
       return false;
 
   
-   if(CopyBuffer(tickChartHandle,TICKCHART_OPEN,start,count,o) == -1)
+   if(CopyBuffer(volumeChartHandle,VOLUMECHART_OPEN,start,count,o) == -1)
       return false;
-   if(CopyBuffer(tickChartHandle,TICKCHART_LOW,start,count,l) == -1)
+   if(CopyBuffer(volumeChartHandle,VOLUMECHART_LOW,start,count,l) == -1)
       return false;
-   if(CopyBuffer(tickChartHandle,TICKCHART_HIGH,start,count,h) == -1)
+   if(CopyBuffer(volumeChartHandle,VOLUMECHART_HIGH,start,count,h) == -1)
       return false;
-   if(CopyBuffer(tickChartHandle,TICKCHART_CLOSE,start,count,c) == -1)
+   if(CopyBuffer(volumeChartHandle,VOLUMECHART_CLOSE,start,count,c) == -1)
       return false;
-   if(CopyBuffer(tickChartHandle,TICKCHART_BAR_OPEN_TIME,start,count,time) == -1)
+   if(CopyBuffer(volumeChartHandle,VOLUMECHART_BAR_OPEN_TIME,start,count,time) == -1)
       return false;
-   if(CopyBuffer(tickChartHandle,TICKCHART_BAR_COLOR,start,count,barColor) == -1)
+   if(CopyBuffer(volumeChartHandle,VOLUMECHART_BAR_COLOR,start,count,barColor) == -1)
       return false;
-   if(CopyBuffer(tickChartHandle,TICKCHART_TICK_VOLUME,start,count,tick_volume) == -1)
+   if(CopyBuffer(volumeChartHandle,VOLUMECHART_TICK_VOLUME,start,count,tick_volume) == -1)
       return false;
-   if(CopyBuffer(tickChartHandle,TICKCHART_REAL_VOLUME,start,count,real_volume) == -1)
+   if(CopyBuffer(volumeChartHandle,VOLUMECHART_REAL_VOLUME,start,count,real_volume) == -1)
       return false;
 
    if(ArrayResize(ratesInfoArray,count) == -1)
@@ -437,11 +447,11 @@ bool TickChart::GetBuySellVolumeBreakdown(double &buy[], double &sell[], double 
    if(ArrayResize(bs,count) == -1)
       return false;
 
-   if(CopyBuffer(tickChartHandle,TICKCHART_BUY_VOLUME,start,count,b) == -1)
+   if(CopyBuffer(volumeChartHandle,VOLUMECHART_BUY_VOLUME,start,count,b) == -1)
       return false;
-   if(CopyBuffer(tickChartHandle,TICKCHART_SELL_VOLUME,start,count,s) == -1)
+   if(CopyBuffer(volumeChartHandle,VOLUMECHART_SELL_VOLUME,start,count,s) == -1)
       return false;
-   if(CopyBuffer(tickChartHandle,TICKCHART_BUYSELL_VOLUME,start,count,bs) == -1)
+   if(CopyBuffer(volumeChartHandle,VOLUMECHART_BUYSELL_VOLUME,start,count,bs) == -1)
       return false;
 
    if(ArrayResize(buy,count) == -1)
@@ -479,13 +489,13 @@ bool TickChart::GetMA(int MaBufferId, double &MA[], int start, int count)
    if(ArrayResize(MA, count) == -1)
       return false;
    
-   if(MaBufferId != TICKCHART_MA1 && MaBufferId != TICKCHART_MA2 && MaBufferId != TICKCHART_MA3 && MaBufferId != TICKCHART_MA4)
+   if(MaBufferId != VOLUMECHART_MA1 && MaBufferId != VOLUMECHART_MA2 && MaBufferId != VOLUMECHART_MA3 && MaBufferId != VOLUMECHART_MA4)
    {
       Print("Incorrect MA buffer id specified in "+__FUNCTION__);
       return false;
    }
    
-   if(CopyBuffer(tickChartHandle, MaBufferId,start,count,tempMA) == -1)
+   if(CopyBuffer(volumeChartHandle, MaBufferId,start,count,tempMA) == -1)
    {
       return false;
    }
@@ -514,7 +524,7 @@ bool TickChart::GetMA1(double &MA[], int start, int count)
    if(ArrayResize(MA,count) == -1)
       return false;
    
-   if(CopyBuffer(tickChartHandle,TICKCHART_MA1,start,count,tempMA) == -1)
+   if(CopyBuffer(volumeChartHandle,VOLUMECHART_MA1,start,count,tempMA) == -1)
       return false;
 
    for(int i=0; i<count; i++)
@@ -541,7 +551,7 @@ bool TickChart::GetMA2(double &MA[], int start, int count)
    if(ArrayResize(MA,count) == -1)
       return false;
    
-   if(CopyBuffer(tickChartHandle,TICKCHART_MA2,start,count,tempMA) == -1)
+   if(CopyBuffer(volumeChartHandle,VOLUMECHART_MA2,start,count,tempMA) == -1)
       return false;
    
    for(int i=0; i<count; i++)
@@ -568,7 +578,7 @@ bool TickChart::GetMA3(double &MA[], int start, int count)
    if(ArrayResize(MA,count) == -1)
       return false;
    
-   if(CopyBuffer(tickChartHandle,TICKCHART_MA3,start,count,tempMA) == -1)
+   if(CopyBuffer(volumeChartHandle,VOLUMECHART_MA3,start,count,tempMA) == -1)
       return false;
    
    for(int i=0; i<count; i++)
@@ -641,11 +651,11 @@ bool TickChart::GetChannelData(double &HighArray[], double &MidArray[], double &
    if(ArrayResize(LowArray,count) == -1)
       return false;
    
-   if(CopyBuffer(tickChartHandle,TICKCHART_CHANNEL_HIGH,start,count,tempH) == -1)
+   if(CopyBuffer(volumeChartHandle,VOLUMECHART_CHANNEL_HIGH,start,count,tempH) == -1)
       return false;
-   if(CopyBuffer(tickChartHandle,TICKCHART_CHANNEL_MID,start,count,tempM) == -1)
+   if(CopyBuffer(volumeChartHandle,VOLUMECHART_CHANNEL_MID,start,count,tempM) == -1)
       return false;
-   if(CopyBuffer(tickChartHandle,TICKCHART_CHANNEL_LOW,start,count,tempL) == -1)
+   if(CopyBuffer(volumeChartHandle,VOLUMECHART_CHANNEL_LOW,start,count,tempL) == -1)
       return false;
    
    int tempOffset = count-1;
@@ -688,7 +698,7 @@ double TickChart::GetRuntimeId()
 {
    double runtimeId[1];
     
-   if(CopyBuffer(tickChartHandle, TICKCHART_RUNTIME_ID, 0, 1, runtimeId) == -1)
+   if(CopyBuffer(volumeChartHandle, VOLUMECHART_RUNTIME_ID, 0, 1, runtimeId) == -1)
       return -1;
 
    return runtimeId[0];   

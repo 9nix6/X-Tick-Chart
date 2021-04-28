@@ -20,7 +20,7 @@ input int InpRSIPeriod = 14; // RSI period
 // You need to include the TickChart.mqh header file
 //
 
-#include <AZ-INVEST/SDK/TickChart.mqh>
+#include <AZ-INVEST/SDK/VolumeBarChart.mqh>
 //
 //  To use the TickChart indicator in your EA you need do instantiate the indicator class (TickChart)
 //  and call the Init() and Deinit() methods in your EA's OnInit() and OnDeinit() functions.
@@ -114,7 +114,7 @@ void OnTick()
       double MA1[]; // array to be filled by values of the first moving average
       double MA2[]; // array to be filled by values of the second moving average
       
-      if(tickChart.GetMA(TICKCHART_MA1, MA1, startAtBar, numberOfBars) && tickChart.GetMA(TICKCHART_MA2, MA2, startAtBar, numberOfBars))
+      if(tickChart.GetMA(VOLUMECHART_MA1, MA1, startAtBar, numberOfBars) && tickChart.GetMA(VOLUMECHART_MA2, MA2, startAtBar, numberOfBars))
       {
          //
          // Values are stored in the MA1 and MA2 arrays and are now ready for use
