@@ -12,7 +12,7 @@
 //#define ULTIMATE_RENKO_LICENSE // uncomment when used on Ultimate Renko chart from https://www.az-invest.eu/ultimate-renko-indicator-generator-for-metatrader-5
 //#define VOLUMECHART_LICENSE // uncomment when used on a Tick & Volume bar chart from https://www.az-invest.eu/Tick-chart-and-volume-chart-for-mt5
 //#define SECONDSCHART_LICENSE // uncomment when used on a Seconds TF bar chart from https://www.az-invest.eu/seconds-timeframe-chart-for-metatrader-5
-#define LINEBREAKCHART_LICENSE // uncomment when used on a Line Break chart from https://www.az-invest.eu/linebreak-chart-for-metatrader-5
+//#define LINEBREAKCHART_LICENSE // uncomment when used on a Line Break chart from https://www.az-invest.eu/linebreak-chart-for-metatrader-5
 
 //
 // Uncomment only ONE of the 5 directives listed below and recompile
