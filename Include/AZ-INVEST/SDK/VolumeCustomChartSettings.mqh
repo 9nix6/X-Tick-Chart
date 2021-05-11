@@ -2,7 +2,7 @@
 
 #ifdef USE_LICENSE
    #ifdef DEVELOPER_VERSION
-      #define CUSTOM_CHART_NAME "TickChart_TEST"
+      #define CUSTOM_CHART_NAME "Volume bar chart"
    #else
       #ifdef AMP_VERSION
          #define CUSTOM_CHART_NAME "DTA Tickchart"
@@ -15,7 +15,7 @@
       #define CUSTOM_CHART_NAME "Volume bar chart"
    #else
       #ifdef DEVELOPER_VERSION
-         #define CUSTOM_CHART_NAME "VolumeChart_TEST"
+         #define CUSTOM_CHART_NAME "Volume bar chart"
       #else
          #define CUSTOM_CHART_NAME "Volume bar chart"
       #endif
@@ -32,17 +32,17 @@
    
    #else // user defined settings
    
-      input int                           barSizeInVolume = 1000;              // Bar size
-      input ENUM_VOLUME_CHART_CALCULATION algorithm = VOLUME_CHART_USE_TICKS;  // Operating mode
-      input int                           showNumberOfDays = 5;                // Show history for number of days
-      input ENUM_BOOL                     resetOpenOnNewTradingDay = true;     // Synchronize first bar's open on new day
+      input int                           InpBarSizeInVolume = 1000;              // Bar size
+      input ENUM_VOLUME_CHART_CALCULATION InpAlgorithm = VOLUME_CHART_USE_TICKS;  // Operating mode
+      input int                           InpShowNumberOfDays = 5;                // Show history for number of days
+      input ENUM_BOOL                     InpResetOpenOnNewTradingDay = true;     // Synchronize first bar's open on new day
    
    #endif
 #else // don't SHOW_INDICATOR_INPUTS 
-      int         barSizeInVolume = 1000;                                  // Bar size
-      ENUM_VOLUME_CHART_CALCULATION algorithm = VOLUME_CHART_USE_TICKS;    // Operating mode 
-      int         showNumberOfDays = 5;                                    // Show history for number of days
-      ENUM_BOOL   resetOpenOnNewTradingDay = true;                         // Synchronize first bar's open on new day
+      int         InpBarSizeInVolume = 1000;                                  // Bar size
+      ENUM_VOLUME_CHART_CALCULATION InpAlgorithm = VOLUME_CHART_USE_TICKS;    // Operating mode 
+      int         InpShowNumberOfDays = 5;                                    // Show history for number of days
+      ENUM_BOOL   InpResetOpenOnNewTradingDay = true;                         // Synchronize first bar's open on new day
 #endif
 
 //
@@ -104,8 +104,8 @@ uint CVolumeCustomChartSettigns::CustomChartSettingsFromFile(int file_handle)
 
 void CVolumeCustomChartSettigns::SetCustomChartSettings()
 {
-   settings.barSizeInVolume = barSizeInVolume;
-   settings.algorithm = algorithm;
-   settings.showNumberOfDays = showNumberOfDays;
-   settings.resetOpenOnNewTradingDay = resetOpenOnNewTradingDay;
+   settings.barSizeInVolume = InpBarSizeInVolume;
+   settings.algorithm = InpAlgorithm;
+   settings.showNumberOfDays = InpShowNumberOfDays;
+   settings.resetOpenOnNewTradingDay = InpResetOpenOnNewTradingDay;
 }

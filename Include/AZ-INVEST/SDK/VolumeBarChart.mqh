@@ -219,6 +219,7 @@ int TickChart::Init()
 
    VOLUMECHART_SETTINGS s = volumeChartSettings.GetVolumeChartSettings();         
    CHART_INDICATOR_SETTINGS cis = volumeChartSettings.GetChartIndicatorSettings(); 
+   ALERT_INFO_SETTINGS als = volumeChartSettings.GetAlertInfoSettings();
 
    volumeChartHandle = iCustom(this.tickChartSymbol, _Period, VOLUMECHART_INDICATOR_NAME, 
                                        s.barSizeInVolume, 
@@ -226,11 +227,11 @@ int TickChart::Init()
                                        s.showNumberOfDays, 
                                        s.resetOpenOnNewTradingDay,
                                        "=",
-                                       showPivots,
-                                       pivotPointCalculationType,
+                                       als.showPivots,
+                                       als.pivotPointCalculationType,
                                        "=",
-                                       AlertMeWhen,
-                                       AlertNotificationType,
+                                       InpAlertMeWhen,
+                                       InpAlertNotificationType,
                                        "=",
                                        cis.MA1lineType,
                                        cis.MA1period,

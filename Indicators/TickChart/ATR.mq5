@@ -14,7 +14,7 @@
 #property indicator_color1  DodgerBlue
 #property indicator_label1  "ATR"
 //--- input parameters
-input int InpAtrPeriod=14;  // ATR period
+input int Inp_AtrPeriod=14;  // ATR period
 //--- indicator buffers
 double    ExtATRBuffer[];
 double    ExtTRBuffer[];
@@ -33,19 +33,19 @@ int       ExtPeriodATR;
 void OnInit()
   {
 //--- check for input value
-   if(InpAtrPeriod<=0)
+   if(Inp_AtrPeriod<=0)
      {
       ExtPeriodATR=14;
-      printf("Incorrect input parameter InpAtrPeriod = %d. Indicator will use value %d for calculations.",InpAtrPeriod,ExtPeriodATR);
+      printf("Incorrect input parameter InpAtrPeriod = %d. Indicator will use value %d for calculations.",Inp_AtrPeriod,ExtPeriodATR);
      }
-   else ExtPeriodATR=InpAtrPeriod;
+   else ExtPeriodATR=Inp_AtrPeriod;
 //--- indicator buffers mapping
    SetIndexBuffer(0,ExtATRBuffer,INDICATOR_DATA);
    SetIndexBuffer(1,ExtTRBuffer,INDICATOR_CALCULATIONS);
 //---
    IndicatorSetInteger(INDICATOR_DIGITS,_Digits);
 //--- sets first bar from what index will be drawn
-   PlotIndexSetInteger(0,PLOT_DRAW_BEGIN,InpAtrPeriod);
+   PlotIndexSetInteger(0,PLOT_DRAW_BEGIN,Inp_AtrPeriod);
 //--- name for DataWindow and indicator subwindow label
    string short_name="ATR("+string(ExtPeriodATR)+")";
    IndicatorSetString(INDICATOR_SHORTNAME,short_name);
