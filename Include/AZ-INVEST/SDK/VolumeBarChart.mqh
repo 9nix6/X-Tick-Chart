@@ -225,6 +225,7 @@ int TickChart::Init()
                                        s.barSizeInVolume, 
                                        s.algorithm, 
                                        s.showNumberOfDays, 
+                                       s.showFromDate,
                                        s.resetOpenOnNewTradingDay,
                                        "=",
                                        als.showPivots,
@@ -264,8 +265,7 @@ int TickChart::Init()
                                        cis.ChannelAppliedPrice,
                                        cis.ChannelMultiplier,
                                        cis.ChannelBandsDeviations,
-                                       cis.ChannelPriceLabel,
-                                       cis.ChannelMidPriceLabel,
+                                       cis.ChannelPriceLabels,
                                        "=",
                                        true); // used in EA
 // TopBottomPaddingPercentage,

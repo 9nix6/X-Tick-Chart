@@ -35,6 +35,7 @@
       input int                           InpBarSizeInVolume = 1000;              // Bar size
       input ENUM_VOLUME_CHART_CALCULATION InpAlgorithm = VOLUME_CHART_USE_TICKS;  // Operating mode
       input int                           InpShowNumberOfDays = 5;                // Show history for number of days
+      input datetime                      InpShowFromDate = 0;                    // Show history starting from
       input ENUM_BOOL                     InpResetOpenOnNewTradingDay = true;     // Synchronize first bar's open on new day
    
    #endif
@@ -42,6 +43,7 @@
       int         InpBarSizeInVolume = 1000;                                  // Bar size
       ENUM_VOLUME_CHART_CALCULATION InpAlgorithm = VOLUME_CHART_USE_TICKS;    // Operating mode 
       int         InpShowNumberOfDays = 5;                                    // Show history for number of days
+      datetime    InpShowFromDate = 0;                                        // Show history starting from
       ENUM_BOOL   InpResetOpenOnNewTradingDay = true;                         // Synchronize first bar's open on new day
 #endif
 
@@ -56,6 +58,7 @@ struct VOLUMECHART_SETTINGS
    int                           barSizeInVolume;
    ENUM_VOLUME_CHART_CALCULATION algorithm;
    int                           showNumberOfDays;
+   datetime                      showFromDate;
    ENUM_BOOL                     resetOpenOnNewTradingDay;   
 };
 
@@ -107,5 +110,6 @@ void CVolumeCustomChartSettigns::SetCustomChartSettings()
    settings.barSizeInVolume = InpBarSizeInVolume;
    settings.algorithm = InpAlgorithm;
    settings.showNumberOfDays = InpShowNumberOfDays;
+   settings.showFromDate = InpShowFromDate;
    settings.resetOpenOnNewTradingDay = InpResetOpenOnNewTradingDay;
 }
