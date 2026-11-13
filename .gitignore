@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+
+# Build output. Binaries are produced by CI and attached to releases --
+# a committed .ex5 goes stale the moment its source changes, and nothing says so.
+*.ex4
+*.ex5

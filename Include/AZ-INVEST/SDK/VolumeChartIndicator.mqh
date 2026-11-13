@@ -1,4 +1,4 @@
-#property copyright "Copyright 2018-2020, Level Up Software"
+﻿#property copyright "Copyright 2018-2020, Level Up Software"
 #property link      "http://www.az-invest.eu"
 #property version   "4.01"
 
@@ -69,6 +69,18 @@ class VolumeChartIndicator
       int      GetRatesTotal() { return ArraySize(Open); };     
       void     BufferShiftLeft(double &buffer[]);
             
+      bool     CanvasXYToTimePrice(
+                  long           chart_id,     // Chart ID
+                  long           x,            // The X coordinate on the chart
+                  double         y,            // The Y coordinate on the chart
+                  int&           sub_window,   // The number of the subwindow
+                  datetime&      time,         // Time on custom chart
+                  datetime&      canvasTime,   // Time on canvas chart
+                  double&        price         // Price oncustom chart
+               );
+      bool     TimeToCustomChartTime(datetime canvasTime, datetime& customChartTime);
+      bool     CustomChartTimeToCanvasTime(datetime customChartTime, datetime& canvasTime);
+
    private:
   
       bool  CheckStatus();
@@ -895,3 +907,52 @@ datetime VolumeChartIndicator::GetArrayValueDateTime(datetime &arr[], int index)
    }
 }
 
+bool VolumeChartIndicator::CanvasXYToTimePrice(
+                  long           chart_id,     // Chart ID
+                  long           x,            // The X coordinate on the chart
+                  double         y,            // The Y coordinate on the chart
+                  int&           sub_window,   // The number of the subwindow
+                  datetime&      time,         // Time on custom chart
+                  datetime&      canvasTime,   // Time on canvas chart
+                  double&        price)        // Price on custom chart
+{  
+   if(!ChartXYToTimePrice(chart_id, (int)x, (int)y, sub_window, canvasTime, price))
+      return false;
+
+   return TimeToCustomChartTime(canvasTime, time);
+}
+
+bool VolumeChartIndicator::TimeToCustomChartTime(datetime canvasTime, datetime& customChartTime)
+{
+   int ix = iBarShift(_Symbol, _Period, canvasTime); 
+   if(ix < 0)
+      return false;
+      
+   ArraySetAsSeries(Time,true);
+
+   customChartTime = Time[(int)MathAbs(MathMin((double)(ArraySize(Time)-1), (double)ix))];
+   return true;
+}
+
+bool VolumeChartIndicator::CustomChartTimeToCanvasTime(datetime customChartTime, datetime& canvasTime)
+{
+   ArraySetAsSeries(Time,true);
+   
+   int ix = -1;
+   int count = ArraySize(Time);
+   
+   for(int i=0; i<count; i++)
+   {
+      if(Time[i] <= customChartTime)
+      {
+         ix = i;
+         break;
+      }
+   }
+   
+   if(ix == -1)
+      return false;
+      
+   canvasTime = ::iTime(_Symbol, _Period, ix);
+   return true;
+}

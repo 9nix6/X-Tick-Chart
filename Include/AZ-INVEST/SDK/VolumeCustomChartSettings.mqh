@@ -1,4 +1,4 @@
-#include <AZ-INVEST/SDK/CommonSettings.mqh>
+﻿#include <AZ-INVEST/SDK/CommonSettings.mqh>
 
 #ifdef USE_LICENSE
    #ifdef DEVELOPER_VERSION
@@ -51,7 +51,7 @@
 // Remaining settings are located in the include file below.
 // These are common for all custom charts
 //
-#include <az-invest/sdk/CustomChartSettingsBase.mqh>
+#include <AZ-INVEST/SDK/CustomChartSettingsBase.mqh>
 
 struct VOLUMECHART_SETTINGS
 {
@@ -79,6 +79,7 @@ class CVolumeCustomChartSettigns : public CCustomChartSettingsBase
    virtual string GetSettingsFileName();
    virtual uint CustomChartSettingsToFile(int handle);
    virtual uint CustomChartSettingsFromFile(int handle);
+   virtual uint CustomChartSettingsSize();
 };
 
 void CVolumeCustomChartSettigns::CVolumeCustomChartSettigns()
@@ -103,6 +104,11 @@ uint CVolumeCustomChartSettigns::CustomChartSettingsToFile(int file_handle)
 uint CVolumeCustomChartSettigns::CustomChartSettingsFromFile(int file_handle)
 {
    return FileReadStruct(file_handle,this.settings);
+}
+
+uint CVolumeCustomChartSettigns::CustomChartSettingsSize()
+{
+   return sizeof(this.settings);
 }
 
 void CVolumeCustomChartSettigns::SetCustomChartSettings()

@@ -1,4 +1,4 @@
-#property copyright "Copyright 2018-2021, Level Up Software"
+﻿#property copyright "Copyright 2018-2021, Level Up Software"
 #property link      "https://www.az-invest.eu"
 
 #ifdef DEVELOPER_VERSION
@@ -65,7 +65,7 @@
 #define TICKCHART_RUNTIME_ID      20
 //
 
-#include <az-invest/sdk/VolumeCustomChartSettings.mqh>
+#include <AZ-INVEST/SDK/VolumeCustomChartSettings.mqh>
 
 class TickChart
 {
@@ -163,7 +163,7 @@ void TickChart::ReleaseHandle()
 
 int TickChart::Init()
 {
-   if(!MQLInfoInteger((int)MQL5_TESTING))
+   if(!MQLInfoInteger((int)MQL_TESTER))
    {
       if(usedByIndicatorOnVolumeChart) 
       {
