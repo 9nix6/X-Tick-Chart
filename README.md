@@ -143,7 +143,6 @@ the sources beside them.
 |---|---|---|
 | MetaTrader 5 | X Tick Chart | MQL5 Market |
 | MetaTrader 5 | [Tick Chart & Volume Chart for MetaTrader 5](https://www.az-invest.eu/tick-chart-and-volume-chart-for-mt5) | az-invest.eu |
-| MetaTrader 4 | [Renko & Tick chart plug-in](https://www.az-invest.eu/renko-tick-chart-plug-in-for-metatrader4) | az-invest.eu |
 
 Both MT5 editions are the same engine and both work with this SDK — they differ only in the
 indicator name, which is what [Selecting your edition](#selecting-your-edition) is about.
