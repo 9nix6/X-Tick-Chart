@@ -12,48 +12,48 @@
 //| its symbol and period are the instance's own. On its own chart   |
 //| every call below behaves exactly as the unguarded call did.      |
 //|                                                                  |
-//| Same file as the one the product installer ships.                |
+//| Same guard as the one the product installer ships.               |
 //+------------------------------------------------------------------+
 #ifndef AZ_CHART_OWNERSHIP_MQH
 #define AZ_CHART_OWNERSHIP_MQH
 
-bool IsOwnChart(long chartId, string instanceSymbol, ENUM_TIMEFRAMES instancePeriod)
+bool IsOwnChart(long targetChart, string instanceSymbol, ENUM_TIMEFRAMES instancePeriod)
 {
    if(instancePeriod == PERIOD_CURRENT)
       instancePeriod = (ENUM_TIMEFRAMES)Period();
-   return ChartSymbol(chartId) == instanceSymbol
-       && (ENUM_TIMEFRAMES)ChartPeriod(chartId) == instancePeriod;
+   return ChartSymbol(targetChart) == instanceSymbol
+       && (ENUM_TIMEFRAMES)ChartPeriod(targetChart) == instancePeriod;
 }
 
-// Guarded ChartSetSymbolPeriod(chartId, instanceSymbol, instancePeriod). Returns whether a reload
+// Guarded ChartSetSymbolPeriod(targetChart, instanceSymbol, instancePeriod). Returns whether a reload
 // was requested. Says why it did not, once per instance, so a refusal is never silent.
-bool ReloadChartIfOwn(long chartId, string instanceSymbol, ENUM_TIMEFRAMES instancePeriod)
+bool ReloadChartIfOwn(long targetChart, string instanceSymbol, ENUM_TIMEFRAMES instancePeriod)
 {
-   if(!IsOwnChart(chartId, instanceSymbol, instancePeriod))
+   if(!IsOwnChart(targetChart, instanceSymbol, instancePeriod))
    {
       static bool told = false;
       if(!told)
       {
          told = true;
-         Print("Not reloading chart ", chartId, " (", ChartSymbol(chartId), ") - it is not this instance's "
+         Print("Not reloading chart ", targetChart, " (", ChartSymbol(targetChart), ") - it is not this instance's "
                + instanceSymbol + " chart (instance created by iCustom?)");
       }
       return false;
    }
-   return ChartSetSymbolPeriod(chartId, instanceSymbol, instancePeriod);
+   return ChartSetSymbolPeriod(targetChart, instanceSymbol, instancePeriod);
 }
 
 // Guarded ChartIndicatorDelete. Returns whether the delete succeeded.
-bool RemoveIndicatorIfOwnChart(long chartId, int subWindow, string shortName,
+bool RemoveIndicatorIfOwnChart(long targetChart, int subWindow, string shortName,
                                string instanceSymbol, ENUM_TIMEFRAMES instancePeriod)
 {
-   if(!IsOwnChart(chartId, instanceSymbol, instancePeriod))
+   if(!IsOwnChart(targetChart, instanceSymbol, instancePeriod))
    {
-      Print("Not removing " + shortName + " from chart ", chartId, " (", ChartSymbol(chartId),
+      Print("Not removing " + shortName + " from chart ", targetChart, " (", ChartSymbol(targetChart),
             ") - it is not this instance's " + instanceSymbol + " chart (instance created by iCustom?)");
       return false;
    }
-   return ChartIndicatorDelete(chartId, subWindow, shortName);
+   return ChartIndicatorDelete(targetChart, subWindow, shortName);
 }
 
 #endif

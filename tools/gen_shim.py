@@ -87,14 +87,9 @@ PATCHES = [
         "ChartSetSymbolPeriod(ChartID(), _Symbol, _Period); // try to force reload",
         "ReloadChartIfOwn(ChartID(), _Symbol, _Period); // try to force reload",
     ),
-    # Public since 2020 and a no-op; kept so customer indicators that call it
-    # from their own OnDeinit() keep compiling. The bundle's class never had it.
-    (
-        "OnDeinit declaration",
-        "      bool     OnCalculate(const int _rates_total,const int _prev_calculated, const datetime &_Time[], const double &_Close[]);\n",
-        "      bool     OnCalculate(const int _rates_total,const int _prev_calculated, const datetime &_Time[], const double &_Close[]);\n"
-        "      void     OnDeinit(const int reason);\n",
-    ),
+    # The bundle's class declares OnDeinit() and never defines it, which only
+    # compiles while nobody calls it. This product's header has always defined
+    # it (a no-op), so customer indicators that call it keep linking.
     (
         "OnDeinit definition",
         "bool VolumeChartIndicator::OnCalculate(",

@@ -35,6 +35,7 @@ class MedianRenkoIndicator
       MedianRenko          * medianRenko;
    public:
       bool     OnCalculate(const int _rates_total,const int _prev_calculated, const datetime &_Time[], const double &_Close[]);
+      void     OnDeinit(const int reason);
 };
 
 MedianRenkoIndicator::MedianRenkoIndicator()
@@ -79,9 +80,10 @@ class Transform(unittest.TestCase):
         self.assertNotIn("ChartSetSymbolPeriod(", self.out)
         self.assertIn("#include <AZ-INVEST/ChartOwnership.mqh>", self.out)
 
-    def test_on_deinit_stays_public_api(self):
-        self.assertIn("void     OnDeinit(const int reason);", self.out)
-        self.assertIn("void VolumeChartIndicator::OnDeinit(const int reason)", self.out)
+    def test_on_deinit_is_declared_once_and_defined(self):
+        """The bundle declares it without a body; a second declaration is error 222."""
+        self.assertEqual(self.out.count("void     OnDeinit(const int reason);"), 1)
+        self.assertEqual(self.out.count("void VolumeChartIndicator::OnDeinit(const int reason)"), 1)
 
     def test_the_output_says_it_is_generated_and_from_what(self):
         self.assertIn("GENERATED FILE", self.out)

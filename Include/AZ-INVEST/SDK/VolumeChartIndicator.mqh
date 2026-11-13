@@ -83,7 +83,6 @@ class VolumeChartIndicator
       
       bool     OnCalculate(const int _rates_total,const int _prev_calculated, const datetime &_Time[], const double &_Close[]);
       void     OnDeinit(const int reason);
-      void     OnDeinit(const int reason);
       bool     BufferSynchronizationCheck(const double &buffer[]);      
       int      GetPrevCalculated() { return prev_calculated; };     
       int      GetRatesTotal() { return ArraySize(Open); };     
