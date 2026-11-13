@@ -31,12 +31,20 @@ as `../Median-and-Turbo-Renko-indicator-bundle`); change shared files there firs
 | `Include/AZ-INVEST/CustomBarConfig.mqh` | the bundle's file with `VOLUMECHART_LICENSE` selected instead of `ULTIMATE_RENKO_LICENSE` |
 | `Experts/2MA_Cross.mq5`, `PriceMA_Cross.mq5` | the bundle's files with `EA_ON_TICK_VOLUME_CHART` selected instead of `EA_ON_RENKO` |
 | `tools/`, `.github/workflows/mql-build.yml` | the bundle's, with folder names and release text adapted |
-| `VolumeBarChart.mqh`, `VolumeChartIndicator.mqh`, `VolumeCustomChartSettings.mqh`, example EAs | **owned here** |
+| `Include/AZ-INVEST/SDK/VolumeChartIndicator.mqh` | **generated** by `tools/gen_shim.py` from the bundle's `MedianRenkoIndicator.mqh` at the commit pinned in that script — never edit it by hand |
+| `Include/AZ-INVEST/ChartOwnership.mqh` | the guard the product installer ships; the generated shim uses it so an `iCustom()` instance never reloads the caller's chart |
+| `VolumeBarChart.mqh`, `VolumeCustomChartSettings.mqh`, example EAs | **owned here** |
 
 The bundle's `Include/AGENTS.md`, `Indicators/AGENTS.md` and `Experts/AGENTS.md` describe the
 settings handshake, the resync state machine, the porting contract and the EA conventions. They
 apply here unchanged once you read `MedianRenko` as `TickChart` and `MedianRenkoIndicator` as
-`VolumeChartIndicator` — the owned headers are structural clones of those two.
+`VolumeChartIndicator` — `VolumeBarChart.mqh` is a structural clone of the first, and
+`VolumeChartIndicator.mqh` is generated from the second.
+
+To change the shim: change the bundle's file (or `RENAMES`/`PATCHES` in `tools/gen_shim.py`),
+move `BUNDLE_COMMIT`, run `python3 tools/gen_shim.py`, commit the script and the output together.
+`Scan` runs `tools/gen_shim.py --check` and fails when the committed file is not what the
+script produces.
 
 ## Editions
 
@@ -103,5 +111,5 @@ Both are dictated by the closed-source indicator's current inputs, not by this r
 - Do not edit a shared file here. Change it in the bundle, then copy it over.
 - Do not add licence/activation logic here.
 - Do not reason about bar construction from this repo's code. It is not here.
-- 90 sources, 67 programs. If those numbers move, the compile job's staged-count guard and
+- 91 sources, 67 programs. If those numbers move, the compile job's staged-count guard and
   `tools/tests` will say so.

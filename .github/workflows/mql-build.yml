@@ -59,6 +59,11 @@ jobs:
       - name: Every #include resolves
         run: python3 tools/check_includes.py
 
+      # VolumeChartIndicator.mqh is derived from the bundle's shim at a pinned
+      # commit; a hand edit would be lost on the next regeneration.
+      - name: Generated shim is up to date
+        run: python3 tools/gen_shim.py --check
+
       - name: Tool tests
         run: python3 -m unittest discover -s tools/tests -t .
 
