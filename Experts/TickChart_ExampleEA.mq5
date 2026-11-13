@@ -1,4 +1,4 @@
-#property copyright "Copyright 2019-2020, Level Up"
+﻿#property copyright "Copyright 2019-2020, Level Up"
 #property link      "https://www.az-invest.eu"
 #property version   "3.02"
 #property description "Example EA showing the way to use the TickChart class defined in TickChart.mqh" 
@@ -36,7 +36,7 @@ int OnInit()
 {
    if(tickChart == NULL)
    {
-      tickChart = new TickChart(MQLInfoInteger((int)MQL5_TESTING) ? false : true);
+      tickChart = new TickChart(MQLInfoInteger((int)MQL_TESTER) ? false : true);
    }
    
    tickChart.Init();

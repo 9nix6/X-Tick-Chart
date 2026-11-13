@@ -1,0 +1,413 @@
+name: MQL Build
+
+# Same pipeline as https://github.com/9nix6/Median-and-Turbo-Renko-indicator-bundle
+# (.github/workflows/mql-build.yml), adapted to this product's folder names.
+#
+# Three stages, each gating the next:
+#   scan     — secret leaks + include paths        (hosted, seconds)
+#   compile  — every Experts/ and Indicators/ source through MetaEditor
+#              (self-hosted Windows VM on the Mac Mini — MetaEditor is
+#              Windows-only, so there is nowhere else this can run)
+#   release  — publishes a release with the freshly compiled binaries
+#              (tag push, or workflow_dispatch with a version)
+
+on:
+  push:
+    branches: [master]
+    tags: ["[0-9]+.[0-9]+*"]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Publish a release with this version (e.g. 3.45). Leave empty to build only."
+        type: string
+        required: false
+      release_notes:
+        description: "What changed in this version, one item per line. Appended to the standard package description."
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  # ===========================================================================
+  # Stage 1 — gates that need no platform, so they always run
+  # ===========================================================================
+  scan:
+    name: Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # gitleaks scans history, not just the tip
+
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      # Resolves every #include <...> without a compiler. It reads UTF-16LE
+      # sources, which plain grep cannot -- see tools/check_includes.py.
+      - name: Every #include resolves
+        run: python3 tools/check_includes.py
+
+      - name: Tool tests
+        run: python3 -m unittest discover -s tools/tests -t .
+
+  # ===========================================================================
+  # Stage 2 — the real compile, on the self-hosted Windows VM
+  # ===========================================================================
+  compile:
+    name: Compile (MetaEditor)
+    needs: scan
+    runs-on: [self-hosted, Windows, mql]
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v5
+
+      # MT5 is installed into the workspace and kept between runs, so only the
+      # first run on a fresh runner pays the download. Same approach as
+      # TradingAssistant-VTC4's mql-compile job, which already works on this VM.
+      - name: Ensure MetaTrader 5 is installed
+        run: |
+          $ErrorActionPreference = "Stop"
+          $mt5Dir = Join-Path $PWD "mt5"
+          $metaEditor = Join-Path $mt5Dir "metaeditor64.exe"
+
+          if (Test-Path $metaEditor) {
+            Write-Host "MetaEditor already present: $metaEditor"
+          } else {
+            $url = "${{ vars.MT5_INSTALLER_URL }}"
+            if (-not $url) { $url = "https://download.mql5.com/cdn/web/metaquotes.software.corp/mt5/mt5setup.exe" }
+            Write-Host "Downloading MT5 installer from $url"
+            Invoke-WebRequest -Uri $url -OutFile "mt5setup.exe"
+
+            Write-Host "Installing to $mt5Dir"
+            $p = Start-Process -FilePath "mt5setup.exe" -ArgumentList "/auto", "/path:$mt5Dir" -PassThru -NoNewWindow
+            $p | Wait-Process -Timeout 300 -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 20
+            Remove-Item "mt5setup.exe" -Force -ErrorAction SilentlyContinue
+
+            if (-not (Test-Path $metaEditor)) {
+              throw "MetaEditor not found at $metaEditor after installation"
+            }
+          }
+
+          # Running the terminal once materialises the standard MQL5 includes
+          # (Trade/, Arrays/, Generic/, MovingAverages.mqh) this repo depends on.
+          $stdInclude = Join-Path $mt5Dir "MQL5\Include\Trade\Trade.mqh"
+          if (-not (Test-Path $stdInclude)) {
+            Write-Host "Initialising platform files..."
+            $terminal = Join-Path $mt5Dir "terminal64.exe"
+            $p = Start-Process -FilePath $terminal -ArgumentList "/portable" -PassThru -NoNewWindow
+            Start-Sleep -Seconds 45
+            if (-not $p.HasExited) { $p | Stop-Process -Force -ErrorAction SilentlyContinue }
+          }
+
+          if (Test-Path $stdInclude) {
+            Write-Host "Standard includes present."
+          } else {
+            throw "Standard MQL5 includes missing -- platform initialisation failed, so <Trade/Trade.mqh> and friends will not resolve."
+          }
+
+      # MetaEditor resolves <...> against the data folder's MQL5\Include, so the
+      # repo's own headers have to sit alongside the platform ones. Staging into
+      # the portable install (rather than compiling in place) is what makes
+      # <AZ-INVEST/SDK/...> and <Trade/Trade.mqh> resolve in the same build.
+      # Both MT5 editions of the engine are the same code; they differ only in
+      # the indicator name iCustom() asks for, chosen by MQL5_MARKET_VERSION in
+      # CustomBarConfig.mqh. Each edition is therefore compiled separately, and
+      # each release ships the sources with the define already set to match its
+      # own binaries -- so a customer who recompiles gets what was shipped.
+      - name: Compile both editions
+        id: compile
+        run: |
+          $ErrorActionPreference = "Stop"
+          $mt5Dir  = Join-Path $PWD "mt5"
+          $metaEditor = Join-Path $mt5Dir "metaeditor64.exe"
+          $mql5    = Join-Path $mt5Dir "MQL5"
+          $out     = Join-Path $PWD "compiled"
+          $config  = "Include\AZ-INVEST\CustomBarConfig.mqh"
+          $pristine = Get-Content $config -Raw
+          $failed = 0
+
+          $editions = @(
+            @{ Name = "market";   Market = $true  },
+            @{ Name = "azinvest"; Market = $false }
+          )
+
+          foreach ($edition in $editions) {
+            $name = $edition.Name
+            Write-Host "================ edition: $name ================"
+
+            # Rewrite the define, then compile from that. `-Raw` + a literal
+            # replace keeps the file's BOM and CRLF intact, which the encoding
+            # check in stage 1 requires.
+            if ($edition.Market) {
+              $text = $pristine -replace '(?m)^//#define MQL5_MARKET_VERSION', '#define MQL5_MARKET_VERSION'
+            } else {
+              $text = $pristine -replace '(?m)^#define MQL5_MARKET_VERSION', '//#define MQL5_MARKET_VERSION'
+            }
+            Set-Content -Path $config -Value $text -NoNewline
+            $active = if ($edition.Market) { "#define MQL5_MARKET_VERSION" } else { "//#define MQL5_MARKET_VERSION" }
+            if (-not (Select-String -Path $config -SimpleMatch $active -Quiet)) {
+              throw "Could not set the $name edition define in $config"
+            }
+            Write-Host "CustomBarConfig.mqh: $active"
+
+            # --- stage -------------------------------------------------------
+            # Copy-Item with a wildcard source and a destination that does not
+            # exist creates a FILE named after the destination instead of a
+            # directory. That silently staged zero Experts on the first run, so
+            # each destination is created explicitly first.
+            foreach ($dir in @("Indicators\TickChart", "Experts")) {
+              $target = Join-Path $mql5 $dir
+              if (Test-Path $target) { Remove-Item $target -Recurse -Force }
+              New-Item -ItemType Directory -Path $target -Force | Out-Null
+            }
+
+            Copy-Item -Path "Include\*" -Destination (Join-Path $mql5 "Include") -Recurse -Force
+            Copy-Item -Path "Indicators\TickChart\*" -Destination (Join-Path $mql5 "Indicators\TickChart") -Recurse -Force
+            Copy-Item -Path "Experts\*" -Destination (Join-Path $mql5 "Experts") -Recurse -Force
+
+            # A binary left from the previous edition would be collected as if
+            # this edition had produced it.
+            Get-ChildItem -Path (Join-Path $mql5 "Indicators\TickChart"), (Join-Path $mql5 "Experts") `
+              -Recurse -Include *.ex5, *.ex4 -ErrorAction SilentlyContinue | Remove-Item -Force
+
+            $expected = (Get-ChildItem -Path "Indicators\TickChart", "Experts" -Recurse -Include *.mq5, *.mq4).Count
+            $staged = (Get-ChildItem -Path (Join-Path $mql5 "Indicators\TickChart"), (Join-Path $mql5 "Experts") `
+              -Recurse -Include *.mq5, *.mq4).Count
+            Write-Host "Staged $staged of $expected source file(s)."
+            if ($staged -ne $expected) {
+              throw "Staging is incomplete: $staged staged, $expected in the repository."
+            }
+
+            # --- compile -----------------------------------------------------
+            foreach ($target in @("Experts", "Indicators\TickChart")) {
+              $dir = Join-Path $mql5 $target
+              $log = Join-Path $PWD ("compile-$name-" + ($target -replace '[\\/]', '-') + ".log")
+
+              Write-Host "::group::$name / $target"
+              $p = Start-Process -FilePath $metaEditor `
+                -ArgumentList "/compile:`"$dir`"", "/inc:`"$mql5`"", "/log:`"$log`"" `
+                -PassThru -NoNewWindow -Wait
+              $code = $p.ExitCode
+
+              if (Test-Path $log) {
+                $text = Get-Content $log -Encoding Unicode -Raw
+                if (-not $text) { $text = Get-Content $log -Raw }
+                Write-Host $text
+                $errors = ([regex]::Matches($text, "(?m):\s*error\s")).Count
+                $warnings = ([regex]::Matches($text, "(?m):\s*warning\s")).Count
+                $summary = [regex]::Match($text, "result\s+(\d+)\s+errors?,\s+(\d+)\s+warnings?")
+                if ($summary.Success) {
+                  $errors = [Math]::Max($errors, [int]$summary.Groups[1].Value)
+                  $warnings = [Math]::Max($warnings, [int]$summary.Groups[2].Value)
+                }
+              } else {
+                Write-Host "No log produced by MetaEditor."
+                $errors = 1
+                $warnings = 0
+              }
+              Write-Host "::endgroup::"
+
+              # MetaEditor's exit code is the number of files it compiled, not
+              # an error count -- a successful directory build exits non-zero.
+              Write-Host "$name / $target -- $code file(s) compiled, $errors error(s), $warnings warning(s)"
+
+              # Warnings fail the build too. A warning is the compiler naming
+              # something it had to guess at. Left to accumulate they stop being
+              # read, and the one that matters arrives invisible among them.
+              if ($errors -gt 0 -or $warnings -gt 0) { $failed = 1 }
+            }
+
+            # --- collect -----------------------------------------------------
+            New-Item -ItemType Directory -Path "$out\$name\Experts", "$out\$name\Indicators\TickChart" -Force | Out-Null
+            Get-ChildItem -Path (Join-Path $mql5 "Experts") -Filter *.ex5 -Recurse |
+              Copy-Item -Destination "$out\$name\Experts" -Force
+            Get-ChildItem -Path (Join-Path $mql5 "Indicators\TickChart") -Filter *.ex5 -Recurse |
+              Copy-Item -Destination "$out\$name\Indicators\TickChart" -Force
+
+            # The packaging step takes each edition's sources from here, so the
+            # CustomBarConfig.mqh in a release archive is the one its binaries
+            # were built from rather than a copy edited again later.
+            Copy-Item -Path $config -Destination "$out\$name\CustomBarConfig.mqh" -Force
+
+            $built = (Get-ChildItem -Path "$out\$name" -Recurse -Include *.ex5).Count
+            Write-Host "${name}: produced $built binary file(s)."
+            if ($built -ne $expected) {
+              throw "${name}: $built binaries for $expected sources."
+            }
+          }
+
+          Set-Content -Path $config -Value $pristine -NoNewline
+
+          if ($failed -ne 0) {
+            Write-Error "Compilation reported errors or warnings -- see the logs above."
+            exit 1
+          }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: compiled-binaries
+          path: compiled/
+          if-no-files-found: warn
+          # The release job consumes this within the same run, so it only has to
+          # outlive the run itself. An explicit value here overrides the
+          # repository default, so both have to be set to keep storage down.
+          retention-days: 1
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: compile-logs
+          path: compile-*.log
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # ===========================================================================
+  # Stage 3 — release, only from a tag or an explicit dispatch
+  # ===========================================================================
+  release:
+    name: Release
+    needs: compile
+    if: startsWith(github.ref, 'refs/tags/') || inputs.release_version != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: compiled-binaries
+          path: compiled
+
+      - name: Assemble the package
+        id: package
+        env:
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            version="${GITHUB_REF_NAME}"
+          else
+            version="${{ inputs.release_version }}"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          # One archive per edition. The repository holds sources only; each
+          # edition's binaries come from this run's compile job, together with
+          # the CustomBarConfig.mqh they were built from -- so a customer can
+          # use the .ex5 as shipped *or* recompile and get the same thing,
+          # without having to know about the define at all.
+          package_edition () {
+            local edition="$1" label="$2"
+            local dir="package-$edition"
+            local zip="TickChart-SDK-$version-$label.zip"
+
+            rm -rf "$dir"; mkdir -p "$dir"
+            cp -R Include Indicators Experts README.md LICENSE "$dir/"
+
+            # The define as compiled, not as committed.
+            cp "compiled/$edition/CustomBarConfig.mqh" "$dir/Include/AZ-INVEST/CustomBarConfig.mqh"
+            cp -R "compiled/$edition/Experts/." "$dir/Experts/"
+            cp -R "compiled/$edition/Indicators/TickChart/." "$dir/Indicators/TickChart/"
+
+            # An archive with no binaries, or whose config does not match the
+            # edition it claims, would look fine and mislead whoever downloads
+            # it. Both are cheap to check and neither is recoverable after
+            # publishing.
+            local count
+            count=$(find "$dir" -name '*.ex5' | wc -l)
+            if [ "$count" -eq 0 ]; then
+              echo "::error::$label: no .ex5 in the package -- the compile artifact did not arrive."
+              exit 1
+            fi
+            if [ "$edition" = "market" ]; then
+              grep -q '^#define MQL5_MARKET_VERSION' "$dir/Include/AZ-INVEST/CustomBarConfig.mqh" \
+                || { echo "::error::$label: MQL5_MARKET_VERSION is not enabled in the packaged config."; exit 1; }
+            else
+              grep -q '^//#define MQL5_MARKET_VERSION' "$dir/Include/AZ-INVEST/CustomBarConfig.mqh" \
+                || { echo "::error::$label: MQL5_MARKET_VERSION is not disabled in the packaged config."; exit 1; }
+            fi
+
+            (cd "$dir" && zip -qr "../$zip" .)
+            echo "$label: $count binaries -> $zip"
+            ls -l "$zip"
+          }
+
+          package_edition market   "MQL5-Market"
+          package_edition azinvest "AZ-INVEST"
+
+          # Release body: the standard package description, plus this version's changes.
+          {
+            echo "This package includes the latest set of SDK header files designed to help developers build EAs and indicators that work directly on tick and volume bars."
+            echo
+            echo "The Indicators folder contains 64 indicators (ADX, Fractals, RSI, CCI, Momentum, MACD, Stochastic, MA, VWAP, and more) that have been patched to work directly on the custom chart and use its OLHC values for calculations."
+            echo
+            echo "The Experts folder contains the EAs that document and use the \`TickChart\` class, including the ready-to-trade 2MA_Cross and PriceMA_Cross."
+            echo
+            echo "## What's new in $version"
+            echo
+            if [ -n "${RELEASE_NOTES:-}" ]; then
+              printf '%s\n' "$RELEASE_NOTES" | sed '/^$/d;s/^/- /;s/^- - /- /'
+            else
+              echo "- See the commit history for this tag."
+            fi
+            echo
+            echo "## Which download do I need?"
+            echo
+            echo "Both archives contain the same sources and the same 67 compiled programs. They differ only in which edition of the indicator they are built for, so pick the one matching what you bought:"
+            echo
+            echo "| Archive | For |"
+            echo "|---|---|"
+            echo "| \`TickChart-SDK-$version-MQL5-Market.zip\` | **X Tick Chart**, bought from the MQL5 Market |"
+            echo "| \`TickChart-SDK-$version-AZ-INVEST.zip\` | **Tick Chart & Volume Chart for MetaTrader 5**, bought from az-invest.eu |"
+            echo
+            echo "Copy the \`Include\`, \`Indicators\` and \`Experts\` folders into the \`MQL5\` folder of your MetaTrader data folder. The binaries work as they are -- no compiling needed."
+            echo
+            echo "If the EA or an indicator loads but shows nothing, it is usually the wrong archive: the two editions install the indicator under different names, and the SDK has to ask for the right one."
+            echo
+            echo "## Build"
+            echo
+            echo "Every source under \`Experts/\` and \`Indicators/TickChart/\` was compiled by MetaEditor in CI for this release, once per edition, with any error or warning failing the build. Each archive ships the \`CustomBarConfig.mqh\` its own binaries were compiled from, so recompiling gives you what was shipped."
+          } > release-notes.md
+          cat release-notes.md
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${{ steps.package.outputs.version }}"
+
+          # A version carrying a pre-release suffix must be published as one, or
+          # GitHub makes it "Latest" and every customer visiting /releases sees a
+          # release candidate above the last stable version -- and
+          # /releases/latest resolves to it.
+          prerelease=""
+          case "$version" in
+            *-*) prerelease="--prerelease" ;;
+          esac
+          echo "Publishing $version ${prerelease:-as a full release}"
+
+          gh release create "$version" $prerelease \
+            --title "SDK compatible with X Tick & Volume Bar Chart version $version+" \
+            --notes-file release-notes.md \
+            --target "${GITHUB_SHA}" \
+            "TickChart-SDK-$version-MQL5-Market.zip" \
+            "TickChart-SDK-$version-AZ-INVEST.zip"
