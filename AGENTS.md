@@ -31,20 +31,21 @@ as `../Median-and-Turbo-Renko-indicator-bundle`); change shared files there firs
 | `Include/AZ-INVEST/CustomBarConfig.mqh` | the bundle's file with `VOLUMECHART_LICENSE` selected instead of `ULTIMATE_RENKO_LICENSE` |
 | `Experts/2MA_Cross.mq5`, `PriceMA_Cross.mq5` | the bundle's files with `EA_ON_TICK_VOLUME_CHART` selected instead of `EA_ON_RENKO` |
 | `tools/`, `.github/workflows/mql-build.yml` | the bundle's, with folder names and release text adapted |
-| `Include/AZ-INVEST/SDK/VolumeChartIndicator.mqh` | **generated** by `tools/gen_shim.py` from the bundle's `MedianRenkoIndicator.mqh` at the commit pinned in that script — never edit it by hand |
-| `Include/AZ-INVEST/ChartOwnership.mqh` | the guard the product installer ships; the generated shim uses it so an `iCustom()` instance never reloads the caller's chart |
+| `Include/AZ-INVEST/SDK/VolumeChartIndicator.mqh` | **generated** from the bundle's `MedianRenkoIndicator.mqh`: this product's names substituted, plus the differences declared in `SHIM_PATCHES` — never edit it by hand |
+| `Include/AZ-INVEST/ChartOwnership.mqh` | owned here; the guard the product installer ships. The generated shim uses it so an `iCustom()` instance never reloads the caller's chart |
 | `VolumeBarChart.mqh`, `VolumeCustomChartSettings.mqh`, example EAs | **owned here** |
 
 The bundle's `Include/AGENTS.md`, `Indicators/AGENTS.md` and `Experts/AGENTS.md` describe the
 settings handshake, the resync state machine, the porting contract and the EA conventions. They
 apply here unchanged once you read `MedianRenko` as `TickChart` and `MedianRenkoIndicator` as
-`VolumeChartIndicator` — `VolumeBarChart.mqh` is a structural clone of the first, and
-`VolumeChartIndicator.mqh` is generated from the second.
+`VolumeChartIndicator` — the client header is a structural clone of the first, and `VolumeChartIndicator.mqh` is generated
+from the second.
 
-To change the shim: change the bundle's file (or `RENAMES`/`PATCHES` in `tools/gen_shim.py`),
-move `BUNDLE_COMMIT`, run `python3 tools/gen_shim.py`, commit the script and the output together.
-`Scan` runs `tools/gen_shim.py --check` and fails when the committed file is not what the
-script produces.
+**Every row above except the owned ones and `tools/`+workflow is produced by `tools/sync_from_bundle.py`**
+from the bundle commit pinned in that script (`BUNDLE_COMMIT`). To take a bundle change: move the
+pin, run `python3 tools/sync_from_bundle.py`, compile, commit the script and its output together.
+`Scan` runs it with `--check` and fails when a produced file differs from the bundle or an
+indicator exists here that the bundle does not have.
 
 ## Editions
 
@@ -108,7 +109,8 @@ Both are dictated by the closed-source indicator's current inputs, not by this r
 
 ## Invariants
 
-- Do not edit a shared file here. Change it in the bundle, then copy it over.
+- Do not edit a shared or generated file here. Change it in the bundle, move `BUNDLE_COMMIT`, and
+  run `tools/sync_from_bundle.py`. A hand edit fails `Scan`.
 - Do not add licence/activation logic here.
 - Do not reason about bar construction from this repo's code. It is not here.
 - 91 sources, 67 programs. If those numbers move, the compile job's staged-count guard and

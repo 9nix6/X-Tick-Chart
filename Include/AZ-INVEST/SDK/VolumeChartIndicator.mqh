@@ -8,7 +8,7 @@ input bool UseOnTickChart = true; // Use this indicator with TickChart handle
 // GENERATED FILE -- do not edit by hand.
 // Source: 9nix6/Median-and-Turbo-Renko-indicator-bundle @ fef65beef00c66cbcfbbacc228604c8dfe8d1c8f
 //         Include/AZ-INVEST/SDK/MedianRenkoIndicator.mqh
-// Regenerate with: python3 tools/gen_shim.py   (see that file for what differs and why)
+// Regenerate with: python3 tools/sync_from_bundle.py   (see that file for what differs and why)
 //
 //#define DEVELOPER_VERSION
 #include <AZ-INVEST/ChartOwnership.mqh>
