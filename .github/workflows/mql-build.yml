@@ -59,6 +59,12 @@ jobs:
       - name: Every #include resolves
         run: python3 tools/check_includes.py
 
+      # The shared SDK, the ported indicators and the generated shim all come
+      # from one pinned commit of the Renko bundle. A hand edit to any of them
+      # would be lost on the next sync, so it fails here instead.
+      - name: Shared files match the bundle
+        run: python3 tools/sync_from_bundle.py --check
+
       - name: Tool tests
         run: python3 -m unittest discover -s tools/tests -t .
 

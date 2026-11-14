@@ -1,7 +1,7 @@
 ﻿#property copyright "Copyright 2019-2020, Level Up"
 #property link      "https://www.az-invest.eu"
 #property version   "3.02"
-#property description "Example EA showing the way to use the TickChart class defined in TickChart.mqh" 
+#property description "Example EA showing the way to use the TickChart class defined in VolumeBarChart.mqh" 
 //#define DEVELOPER_VERSION
 
 input int InpRSIPeriod = 14; // RSI period
@@ -17,7 +17,9 @@ input int InpRSIPeriod = 14; // RSI period
 //#define SHOW_INDICATOR_INPUTS
 
 //
-// You need to include the TickChart.mqh header file
+// You need to include the VolumeBarChart.mqh header file. It defines the TickChart class:
+// volume bar charts were merged into this product and the header took that name,
+// while the class kept its own. There is no TickChart.mqh in this SDK.
 //
 
 #include <AZ-INVEST/SDK/VolumeBarChart.mqh>
