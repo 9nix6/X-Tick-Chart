@@ -68,6 +68,7 @@ CONFIG = """\
 """
 
 EA = """\
+// SELECT ONE OF THE FOLLOWING
 //#define EA_ON_RANGE_BARS          // Use EA on RangeBar chart
 #define EA_ON_RENKO               // Use EA on Renko charts
 //#define EA_ON_XTICK_CHART         // Use EA on XTick Chart (obsolete)
