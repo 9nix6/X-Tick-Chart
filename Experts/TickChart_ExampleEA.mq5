@@ -7,6 +7,17 @@
 input int InpRSIPeriod = 14; // RSI period
 
 //
+// EDITION: which TickChart indicator does this EA load?
+// -------------------------------------------------------------------------------------------------
+// Left commented, the EA loads the MQL5 Market edition ("Market\X Tick Chart").
+// If you bought the indicator from https://www.az-invest.eu/Tick-chart-and-volume-chart-for-mt5
+// uncomment the line below, so the EA loads "TickChart" instead, and recompile.
+// The switch in CustomBarConfig.mqh does not reach an EA: this line is the one that decides.
+//
+
+//#define VOLUMECHART_LICENSE
+
+//
 // SHOW_INDICATOR_INPUTS *NEEDS* to be defined, if the EA needs to be *tested in MT5's backtester*
 // -------------------------------------------------------------------------------------------------
 // Using '#define SHOW_INDICATOR_INPUTS' will show the TickChart indicator's inputs 
