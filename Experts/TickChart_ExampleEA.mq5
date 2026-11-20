@@ -100,7 +100,13 @@ void OnTick()
    
    if(rsiHandle == INVALID_HANDLE)
    {
+      // The az-invest.eu installer puts the companion indicators in "Tick Chart" (with a space);
+      // compiled from this repository they are in "TickChart".
+#ifdef VOLUMECHART_LICENSE
+      rsiHandle = iCustom(_Symbol, _Period, "Tick Chart\\RSI", InpRSIPeriod, true);
+#else
       rsiHandle = iCustom(_Symbol, _Period, "TickChart\\RSI", InpRSIPeriod, true);
+#endif
    }
 
    //
