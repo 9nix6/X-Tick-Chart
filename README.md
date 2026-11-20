@@ -63,10 +63,29 @@ then recompile (**F7**). The mapping:
 > A mismatch here means `iCustom()` is asking for an indicator you do not have installed, which
 > produces an empty chart rather than an error message.
 
+### The EAs have their own switch
+
+`CustomBarConfig.mqh` is read by the indicators only. An EA does not include it, so the line above
+does not change which indicator an EA loads. Each EA in `Experts/` carries its own line near the top:
+
+```c
+//#define VOLUMECHART_LICENSE
+```
+
+| You bought | In the EA | Indicator the EA looks for |
+|---|---|---|
+| X Tick Chart (MQL5 Market) | leave it commented — the default | `Market\X Tick Chart` |
+| Tick Chart & Volume Chart for MetaTrader 5 (az-invest.eu) | uncomment it and recompile | `TickChart` |
+
+With the wrong setting the EA fails to start, and the Strategy Tester reports
+`cannot load custom indicator 'Market\X Tick Chart' [4802]`. The release archive for each edition
+already has the line set to match.
+
 `CustomBarConfig.mqh` and the two ready-to-trade EAs are shared with the other AZ-INVEST custom
 chart SDKs, so they also carry `#define`s for those products (Renko, Range Bars, Seconds Chart, Line Break).
-Leave them as they are: this repository contains the headers for Tick & Volume chart only, and the
-`VOLUMECHART_LICENSE` / `EA_ON_TICK_VOLUME_CHART` defines are already selected.
+Leave those as they are: this repository contains the headers for Tick & Volume chart only. In
+`CustomBarConfig.mqh` the `VOLUMECHART_LICENSE` define is already selected; in the two EAs the
+`EA_ON_TICK_VOLUME_CHART` define is already selected, and `VOLUMECHART_LICENSE` is the line described above.
 
 ## Repository layout
 

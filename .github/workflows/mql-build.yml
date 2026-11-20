@@ -82,14 +82,19 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # MT5 is installed into the workspace and kept between runs, so only the
-      # first run on a fresh runner pays the download. Same approach as
-      # TradingAssistant-VTC4's mql-compile job, which already works on this VM.
+      # MT5 lives in the runner's tool cache, OUTSIDE the workspace, so it is kept
+      # between runs and only the first run on a fresh runner pays the download.
+      # It used to be installed into the workspace, where checkout's default
+      # `git clean -ffdx` removed it before this step on every build: each build
+      # then depended on download.mql5.com and on the silent installer, and
+      # installers started together by several runners on the one VM could exit
+      # without installing (9nix6/Median-and-Turbo-Renko-indicator-bundle#39).
       - name: Ensure MetaTrader 5 is installed
         run: |
           $ErrorActionPreference = "Stop"
-          $mt5Dir = Join-Path $PWD "mt5"
+          $mt5Dir = Join-Path $env:RUNNER_TOOL_CACHE "mt5-mql-build"
           $metaEditor = Join-Path $mt5Dir "metaeditor64.exe"
+          "MT5_DIR=$mt5Dir" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
           if (Test-Path $metaEditor) {
             Write-Host "MetaEditor already present: $metaEditor"
@@ -136,11 +141,17 @@ jobs:
       # CustomBarConfig.mqh. Each edition is therefore compiled separately, and
       # each release ships the sources with the define already set to match its
       # own binaries -- so a customer who recompiles gets what was shipped.
+      #
+      # The EAs do not include CustomBarConfig.mqh. Each one picks the indicator
+      # name from its own VOLUMECHART_LICENSE line, which is commented in the
+      # repository (the MQL5 Market default). For the other edition that line is
+      # uncommented in the staged copy before compiling; without it the EA
+      # binaries of both editions ask for the Market indicator (9nix6/Median-and-Turbo-Renko-indicator-bundle#46).
       - name: Compile both editions
         id: compile
         run: |
           $ErrorActionPreference = "Stop"
-          $mt5Dir  = Join-Path $PWD "mt5"
+          $mt5Dir  = $env:MT5_DIR
           $metaEditor = Join-Path $mt5Dir "metaeditor64.exe"
           $mql5    = Join-Path $mt5Dir "MQL5"
           $out     = Join-Path $PWD "compiled"
@@ -183,9 +194,44 @@ jobs:
               New-Item -ItemType Directory -Path $target -Force | Out-Null
             }
 
+            # The install outlives the build, so whatever an earlier build staged
+            # into MQL5\Include is still there. Remove this repository's own
+            # entries before copying, or a header deleted from the repository
+            # would keep resolving. The platform's own includes are left alone.
+            foreach ($entry in Get-ChildItem -Path "Include") {
+              $stale = Join-Path (Join-Path $mql5 "Include") $entry.Name
+              if (Test-Path $stale) { Remove-Item $stale -Recurse -Force }
+            }
             Copy-Item -Path "Include\*" -Destination (Join-Path $mql5 "Include") -Recurse -Force
             Copy-Item -Path "Indicators\TickChart\*" -Destination (Join-Path $mql5 "Indicators\TickChart") -Recurse -Force
             Copy-Item -Path "Experts\*" -Destination (Join-Path $mql5 "Experts") -Recurse -Force
+
+            # The EA's own edition line (see the comment above this step). Read
+            # and written as bytes-with-encoding so the BOM and CRLF survive.
+            # An EA without the line would silently stay on the Market
+            # indicator, so that is an error rather than a skip.
+            $eaDefine = 'VOLUMECHART_LICENSE'
+            $stagedEas = Get-ChildItem -Path (Join-Path $mql5 "Experts") -Recurse -Include *.mq5
+            foreach ($ea in $stagedEas) {
+              $bytes  = [System.IO.File]::ReadAllBytes($ea.FullName)
+              $hasBom = $bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF
+              $eaText = [System.IO.File]::ReadAllText($ea.FullName)
+              $commented = [regex]::Matches($eaText, "(?m)^//#define $eaDefine\b").Count
+              $enabled   = [regex]::Matches($eaText, "(?m)^#define $eaDefine\b").Count
+              if ($edition.Market) {
+                if ($commented -ne 1 -or $enabled -ne 0) {
+                  throw "$($ea.Name): expected one commented '//#define $eaDefine' line (the Market default), found $commented commented and $enabled enabled."
+                }
+              } else {
+                if ($commented -ne 1 -or $enabled -ne 0) {
+                  throw "$($ea.Name): no single '//#define $eaDefine' line to enable for the $name edition (found $commented commented, $enabled enabled)."
+                }
+                $eaText = [regex]::Replace($eaText, "(?m)^//#define $eaDefine\b", "#define $eaDefine")
+                [System.IO.File]::WriteAllText($ea.FullName, $eaText, (New-Object System.Text.UTF8Encoding $hasBom))
+              }
+            }
+            $eaState = if ($edition.Market) { "//#define $eaDefine" } else { "#define $eaDefine" }
+            Write-Host "Experts: $eaState in $($stagedEas.Count) EA(s)."
 
             # A binary left from the previous edition would be collected as if
             # this edition had produced it.
@@ -229,6 +275,24 @@ jobs:
               }
               Write-Host "::endgroup::"
 
+              # MetaEditor names the indicator an EA loads in a tester_indicator
+              # line. That is the only place the compiled edition of an EA shows,
+              # so it is checked here: Market EAs must ask for the Market
+              # indicator and the other edition's must not.
+              if ($target -eq "Experts" -and (Test-Path $log)) {
+                $asked = [regex]::Matches($text, 'tester_indicator "([^"]+)"') | ForEach-Object { $_.Groups[1].Value }
+                $marketAsked = @($asked | Where-Object { $_ -like 'Market\*' })
+                Write-Host "$name / Experts -- indicators asked for: $((@($asked) | Sort-Object -Unique) -join ', ')"
+                if ($edition.Market -and $marketAsked.Count -eq 0) {
+                  Write-Host "::error::${name}: no EA asks for the Market indicator."
+                  $failed = 1
+                }
+                if (-not $edition.Market -and $marketAsked.Count -gt 0) {
+                  Write-Host "::error::${name}: $($marketAsked.Count) EA reference(s) to the Market indicator in the non-Market edition."
+                  $failed = 1
+                }
+              }
+
               # MetaEditor's exit code is the number of files it compiled, not
               # an error count -- a successful directory build exits non-zero.
               Write-Host "$name / $target -- $code file(s) compiled, $errors error(s), $warnings warning(s)"
@@ -237,6 +301,43 @@ jobs:
               # something it had to guess at. Left to accumulate they stop being
               # read, and the one that matters arrives invisible among them.
               if ($errors -gt 0 -or $warnings -gt 0) { $failed = 1 }
+
+              # MetaEditor sometimes leaves a file out of both its count and its
+              # log while still producing the binary (seen repeatedly for the
+              # last indicator of the second edition, 9nix6/Median-and-Turbo-Renko-indicator-bundle#36). Errors and
+              # warnings are found by reading the log, so such a file would pass
+              # unread. Every source without a "compiling" entry is therefore
+              # compiled again on its own, and that log is read instead.
+              $logText = if (Test-Path $log) { "$text" } else { "" }
+              $unlogged = @(Get-ChildItem -Path $dir -Recurse -Include *.mq5, *.mq4 | Where-Object {
+                $logText.IndexOf("information: compiling " + $_.FullName, [System.StringComparison]::OrdinalIgnoreCase) -lt 0
+              })
+              foreach ($src in $unlogged) {
+                $oneLog = Join-Path $PWD ("compile-$name-single-" + $src.BaseName + ".log")
+                Write-Host "::group::$name / $target / $($src.Name) (not in the directory log, compiled again)"
+                Start-Process -FilePath $metaEditor `
+                  -ArgumentList "/compile:`"$($src.FullName)`"", "/inc:`"$mql5`"", "/log:`"$oneLog`"" `
+                  -PassThru -NoNewWindow -Wait | Out-Null
+                $oneText = ""
+                if (Test-Path $oneLog) {
+                  $oneText = Get-Content $oneLog -Encoding Unicode -Raw
+                  if (-not $oneText) { $oneText = Get-Content $oneLog -Raw }
+                }
+                Write-Host $oneText
+                Write-Host "::endgroup::"
+                $oneErrors = ([regex]::Matches("$oneText", "(?m):\s*error\s")).Count
+                $oneWarnings = ([regex]::Matches("$oneText", "(?m):\s*warning\s")).Count
+                $read = "$oneText".IndexOf("information: compiling " + $src.FullName, [System.StringComparison]::OrdinalIgnoreCase) -ge 0
+                Write-Host "$name / $target / $($src.Name) -- compiled again: $oneErrors error(s), $oneWarnings warning(s)"
+                if (-not $read) {
+                  Write-Host "::error::$($src.Name): no compile log even when compiled on its own."
+                  $failed = 1
+                }
+                if ($oneErrors -gt 0 -or $oneWarnings -gt 0) { $failed = 1 }
+              }
+              if ($unlogged.Count -eq 0) {
+                Write-Host "$name / $target -- every source has a compile entry in the log."
+              }
             }
 
             # --- collect -----------------------------------------------------
@@ -250,6 +351,10 @@ jobs:
             # CustomBarConfig.mqh in a release archive is the one its binaries
             # were built from rather than a copy edited again later.
             Copy-Item -Path $config -Destination "$out\$name\CustomBarConfig.mqh" -Force
+
+            # Same for the EA sources: the edition line as compiled.
+            Get-ChildItem -Path (Join-Path $mql5 "Experts") -Filter *.mq5 -Recurse |
+              Copy-Item -Destination "$out\$name\Experts" -Force
 
             $built = (Get-ChildItem -Path "$out\$name" -Recurse -Include *.ex5).Count
             Write-Host "${name}: produced $built binary file(s)."
@@ -350,6 +455,19 @@ jobs:
               grep -q '^//#define MQL5_MARKET_VERSION' "$dir/Include/AZ-INVEST/CustomBarConfig.mqh" \
                 || { echo "::error::$label: MQL5_MARKET_VERSION is not disabled in the packaged config."; exit 1; }
             fi
+
+            # The EA sources come from the compile job too (copied above with
+            # the binaries), so their edition line has to match the archive.
+            local ea
+            for ea in "$dir"/Experts/*.mq5; do
+              if [ "$edition" = "market" ]; then
+                grep -q '^//#define VOLUMECHART_LICENSE' "$ea" \
+                  || { echo "::error::$label: $(basename "$ea") does not have VOLUMECHART_LICENSE commented."; exit 1; }
+              else
+                grep -q '^#define VOLUMECHART_LICENSE' "$ea" \
+                  || { echo "::error::$label: $(basename "$ea") does not have VOLUMECHART_LICENSE enabled."; exit 1; }
+              fi
+            done
 
             (cd "$dir" && zip -qr "../$zip" .)
             echo "$label: $count binaries -> $zip"
