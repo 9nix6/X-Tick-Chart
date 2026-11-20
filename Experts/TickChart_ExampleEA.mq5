@@ -100,7 +100,7 @@ void OnTick()
    
    if(rsiHandle == INVALID_HANDLE)
    {
-      rsiHandle = iCustom(_Symbol, _Period, "TickChart\\TickChart_RSI", InpRSIPeriod, true);
+      rsiHandle = iCustom(_Symbol, _Period, "TickChart\\RSI", InpRSIPeriod, true);
    }
 
    //
