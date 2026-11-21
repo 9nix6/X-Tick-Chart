@@ -41,7 +41,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 BUNDLE_REPO = "9nix6/Median-and-Turbo-Renko-indicator-bundle"
-BUNDLE_COMMIT = "fef65beef00c66cbcfbbacc228604c8dfe8d1c8f"
+BUNDLE_COMMIT = "1aac91ddc8ce08f58c869cec52176abbbe78fa66"
 
 # Everything that differs between the sibling repositories is in this block.
 PRODUCT = {
