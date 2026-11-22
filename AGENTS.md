@@ -73,7 +73,7 @@ Both are dictated by the closed-source indicator's current inputs, not by this r
   `CustomChartSettingsSize() + sizeof(chartIndicatorSettings)`. The override in
   `VolumeCustomChartSettings.mqh` is what makes that check meaningful; without it every file is rejected.
 - The installers ship their own copy of `Include/AZ-INVEST/SDK/` built from the private
-  `installer-builder` repo. When the two disagree, the installer's copy is the one that matches
+  `az-invest-eu/indicators` repo (`mql/Shared`). When the two disagree, the installer's copy is the one that matches
   the indicator binary the customer has.
 
 ## Symptom → where to look
@@ -86,7 +86,7 @@ Both are dictated by the closed-source indicator's current inputs, not by this r
 | "EA works live but not in the Strategy Tester" | `SHOW_INDICATOR_INPUTS` must be `#define`d and the EA recompiled |
 | "a ported indicator plots nothing / is shifted" | that indicator, against the porting contract (bundle's `Indicators/AGENTS.md`) |
 | "objects/arrows are drawn at the wrong bar" | `TimeToCustomChartTime()` / `CustomChartTimeToCanvasTime()` / `CanvasXYToTimePrice()` at the tail of `VolumeChartIndicator.mqh` |
-| "activation / licence" | nothing in this repo — `../AzInvestSales_Azure`, `../AzInvestProducts_Lock`, `../installer-builder` |
+| "activation / licence" | nothing in this repo — `az-invest-eu/activation`, `az-invest-eu/product-locks`, `az-invest-eu/packaging` (private) |
 | trade sizing, SL/TP rejected, trailing stop | `TradeFunctions.mqh`, `TradingChecks.mqh`, `TradeManager.mqh` (shared — fix in the bundle) |
 
 ## Build & CI
